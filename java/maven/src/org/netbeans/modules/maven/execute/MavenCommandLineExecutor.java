@@ -28,6 +28,7 @@ import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.Charset;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -318,7 +319,7 @@ public class MavenCommandLineExecutor extends AbstractMavenExecutor {
         handle.start();
         processInitialMessage();
         boolean isMaven3 = !isMaven2();
-        boolean singlethreaded = !isMultiThreaded(clonedConfig);
+        boolean singlethreaded = !isMavenDaemon() && !isMultiThreaded(clonedConfig);
         boolean eventSpyCompatible = isEventSpyCompatible(clonedConfig);
         if (isMaven3 && singlethreaded && eventSpyCompatible) {
             injectEventSpy( clonedConfig );
@@ -853,6 +854,11 @@ public class MavenCommandLineExecutor extends AbstractMavenExecutor {
         File mvnHome = EmbedderFactory.getEffectiveMavenHome();
         String version = MavenSettings.getCommandLineMavenVersion(mvnHome);
         return version != null && version.startsWith("2");
+    }
+
+    private boolean isMavenDaemon() {
+        File mvnHome = EmbedderFactory.getEffectiveMavenHome();
+        return MavenSettings.isMavenDaemon(Paths.get(mvnHome.getPath()));
     }
 
     private void injectEventSpy(final BeanRunConfig clonedConfig) {

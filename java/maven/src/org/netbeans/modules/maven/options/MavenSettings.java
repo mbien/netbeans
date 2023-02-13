@@ -50,6 +50,7 @@ import org.openide.filesystems.FileUtil;
 import org.openide.filesystems.URLMapper;
 import org.openide.util.NbBundle;
 import org.openide.util.NbPreferences;
+import org.openide.util.Utilities;
 import org.openide.util.WeakSet;
 
 /**
@@ -515,6 +516,12 @@ public final class MavenSettings  {
         } catch (IOException ignored) {}
 
         return null;
+    }
+
+    public static boolean isMavenDaemon(Path mavenHome) {
+        String mvndExecutableName = Utilities.isWindows() ? "mvnd.exe" : "mvnd";
+
+        return Files.exists(mavenHome.resolve("bin").resolve(mvndExecutableName));
     }
 
     private static List<String> searchMavenRuntimes(String[] paths, boolean stopOnFirstValid) {
