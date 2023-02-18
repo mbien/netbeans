@@ -123,8 +123,12 @@ public class TestOutputListenerProvider implements OutputProcessor {
         }
         match = runningPattern2.matcher(line);
         if (match.matches()) {
+            OutputVisitor.Context context = visitor.getContext();
+            if (context == null) {
+                return;
+            }
             try {
-                Object defaultValue = PluginPropertyUtils.createEvaluator(visitor.getContext().getCurrentProject())
+                Object defaultValue = PluginPropertyUtils.createEvaluator(context.getCurrentProject())
                         .evaluate("${project.build.directory}/surefire-reports");
                 if (defaultValue instanceof String) {
                     outputDir = (String) defaultValue;

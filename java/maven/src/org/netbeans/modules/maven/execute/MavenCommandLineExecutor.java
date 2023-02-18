@@ -319,7 +319,7 @@ public class MavenCommandLineExecutor extends AbstractMavenExecutor {
         handle.start();
         processInitialMessage();
         boolean isMaven3 = !isMaven2();
-        boolean singlethreaded = !isMavenDaemon() && !isMultiThreaded(clonedConfig);
+        boolean singlethreaded = !isMultiThreaded(clonedConfig);
         boolean eventSpyCompatible = isEventSpyCompatible(clonedConfig);
         if (isMaven3 && singlethreaded && eventSpyCompatible) {
             injectEventSpy( clonedConfig );
@@ -893,7 +893,11 @@ public class MavenCommandLineExecutor extends AbstractMavenExecutor {
                 list = list + " " + s;
             }
         }
-        return list.contains("-T") || list.contains("--threads");
+        boolean mvnd = isMavenDaemon();
+        if (mvnd && (list.contains("-T 1") || list.contains("--threads 1"))) {
+            return false;
+        }
+        return mvnd || list.contains("-T") || list.contains("--threads");
     }
 
     private File guessBestMaven(RunConfig clonedConfig, InputOutput ioput) {
