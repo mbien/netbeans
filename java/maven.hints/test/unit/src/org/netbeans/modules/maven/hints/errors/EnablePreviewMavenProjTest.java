@@ -18,15 +18,12 @@
  */
 package org.netbeans.modules.maven.hints.errors;
 
-import java.util.List;
-import org.apache.maven.artifact.versioning.ComparableVersion;
 import org.netbeans.api.project.Project;
 import org.netbeans.api.project.ProjectManager;
 import org.netbeans.junit.NbTestCase;
 import org.netbeans.modules.maven.model.Utilities;
 import org.netbeans.modules.maven.model.pom.POMModel;
 import org.netbeans.modules.maven.model.pom.POMModelFactory;
-import org.netbeans.spi.editor.hints.ErrorDescription;
 import org.openide.filesystems.FileObject;
 import org.openide.filesystems.FileUtil;
 import org.openide.filesystems.test.TestFileUtils;
@@ -728,6 +725,118 @@ public class EnablePreviewMavenProjTest extends NbTestCase {
                 "    </build>\n" +
                 "</project>",
                 true);
+    }
+
+    public void testUpdatePluginWithImplicitGroupId() throws Exception {
+        runTest("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
+                "<project xmlns=\"http://maven.apache.org/POM/4.0.0\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:schemaLocation=\"http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd\">\n" +
+                "    <modelVersion>4.0.0</modelVersion>\n" +
+                "    <groupId>test</groupId>\n" +
+                "    <artifactId>mavenproject1</artifactId>\n" +
+                "    <version>1.0-SNAPSHOT</version>\n" +
+                "    <packaging>jar</packaging>\n" +
+                "    <build>\n" +
+                "        <plugins>\n" +
+                "            <plugin>\n" +
+                "                <artifactId>maven-compiler-plugin</artifactId>\n" +
+                "                <version>3.11.0</version>\n" +
+                "                <configuration>\n" +
+                "                    <release>21</release>\n" +
+                "                </configuration>\n" +
+                "            </plugin>\n" +
+                "        </plugins>\n" +
+                "    </build>\n" +
+                "</project>",
+                "21",
+                "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
+                "<project xmlns=\"http://maven.apache.org/POM/4.0.0\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:schemaLocation=\"http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd\">\n" +
+                "    <modelVersion>4.0.0</modelVersion>\n" +
+                "    <groupId>test</groupId>\n" +
+                "    <artifactId>mavenproject1</artifactId>\n" +
+                "    <version>1.0-SNAPSHOT</version>\n" +
+                "    <packaging>jar</packaging>\n" +
+                "    <build>\n" +
+                "        <plugins>\n" +
+                "            <plugin>\n" +
+                "                <artifactId>maven-compiler-plugin</artifactId>\n" +
+                "                <version>3.11.0</version>\n" +
+                "                <configuration>\n" +
+                "                    <release>21</release>\n" +
+                "                    <compilerArgs>\n" +
+                "                        <arg>--enable-preview</arg>\n" +
+                "                    </compilerArgs>\n" +
+                "                </configuration>\n" +
+                "            </plugin>\n" +
+                "        </plugins>\n" +
+                "    </build>\n" +
+                "</project>");
+    }
+
+    public void testUpdatePluginInPluginManagement() throws Exception {
+        runTest("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
+                "<project xmlns=\"http://maven.apache.org/POM/4.0.0\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:schemaLocation=\"http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd\">\n" +
+                "    <modelVersion>4.0.0</modelVersion>\n" +
+                "    <groupId>test</groupId>\n" +
+                "    <artifactId>mavenproject1</artifactId>\n" +
+                "    <version>1.0-SNAPSHOT</version>\n" +
+                "    <packaging>jar</packaging>\n" +
+                "    <properties>\n" +
+                "        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>\n" +
+                "        <maven.compiler.release>21</maven.compiler.release>\n" +
+                "    </properties>\n" +
+                "    <build>\n" +
+                "        <pluginManagement>\n" +
+                "            <plugins>\n" +
+                "                <plugin>\n" +
+                "                    <groupId>org.apache.maven.plugins</groupId>\n" +
+                "                    <artifactId>maven-compiler-plugin</artifactId>\n" +
+                "                    <version>3.11.0</version>\n" +
+                "                </plugin>\n" +
+                "            </plugins>\n" +
+                "        </pluginManagement>\n" +
+                "        <plugins>\n" +
+                "            <plugin>\n" +
+                "                <groupId>org.apache.maven.plugins</groupId>\n" +
+                "                <artifactId>maven-compiler-plugin</artifactId>\n" +
+                "            </plugin>\n" +
+                "        </plugins>\n" +
+                "    </build>\n" +
+                "</project>",
+                "21",
+                "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
+                "<project xmlns=\"http://maven.apache.org/POM/4.0.0\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:schemaLocation=\"http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd\">\n" +
+                "    <modelVersion>4.0.0</modelVersion>\n" +
+                "    <groupId>test</groupId>\n" +
+                "    <artifactId>mavenproject1</artifactId>\n" +
+                "    <version>1.0-SNAPSHOT</version>\n" +
+                "    <packaging>jar</packaging>\n" +
+                "    <properties>\n" +
+                "        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>\n" +
+                "        <maven.compiler.release>21</maven.compiler.release>\n" +
+                "    </properties>\n" +
+                "    <build>\n" +
+                "        <pluginManagement>\n" +
+                "            <plugins>\n" +
+                "                <plugin>\n" +
+                "                    <groupId>org.apache.maven.plugins</groupId>\n" +
+                "                    <artifactId>maven-compiler-plugin</artifactId>\n" +
+                "                    <version>3.11.0</version>\n" +
+                "                    <configuration>\n" +
+                "                        <compilerArgs>\n" +
+                "                            <arg>--enable-preview</arg>\n" +
+                "                        </compilerArgs>\n" +
+                "                    </configuration>\n" +
+                "                </plugin>\n" +
+                "            </plugins>\n" +
+                "        </pluginManagement>\n" +
+                "        <plugins>\n" +
+                "            <plugin>\n" +
+                "                <groupId>org.apache.maven.plugins</groupId>\n" +
+                "                <artifactId>maven-compiler-plugin</artifactId>\n" +
+                "            </plugin>\n" +
+                "        </plugins>\n" +
+                "    </build>\n" +
+                "</project>");
     }
 
     private void runTest(String original, String newSL, String expected) throws Exception {

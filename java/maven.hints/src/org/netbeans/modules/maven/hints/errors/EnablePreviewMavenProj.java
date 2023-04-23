@@ -42,13 +42,11 @@ import org.netbeans.modules.maven.model.pom.POMExtensibilityElement;
 import org.netbeans.modules.maven.model.pom.POMModel;
 import org.netbeans.modules.maven.model.pom.POMQName;
 import org.netbeans.modules.maven.model.pom.Plugin;
+import org.netbeans.modules.maven.model.pom.PluginContainer;
 import org.netbeans.modules.maven.model.pom.Properties;
 import org.netbeans.spi.project.ProjectConfiguration;
 import org.netbeans.spi.project.ProjectConfigurationProvider;
-import org.openide.filesystems.FileStateInvalidException;
-import org.openide.filesystems.FileSystem;
 import org.openide.modules.SpecificationVersion;
-import org.openide.util.Exceptions;
 import org.openide.util.lookup.ServiceProvider;
 
 /**
@@ -71,13 +69,10 @@ public class EnablePreviewMavenProj implements PreviewEnabler {
     @Override
     public void enablePreview(String newSourceLevel) throws Exception {
         final FileObject pom = prj.getProjectDirectory().getFileObject("pom.xml"); // NOI18N
-        pom.getFileSystem().runAtomicAction(new FileSystem.AtomicAction() {
-            @Override
-            public void run() throws IOException {
-                List<ModelOperation<POMModel>> operations = new ArrayList<ModelOperation<POMModel>>();
-                operations.add(new AddMvnCompilerPluginForEnablePreview(newSourceLevel));
-                org.netbeans.modules.maven.model.Utilities.performPOMModelOperations(pom, operations);
-            }
+        pom.getFileSystem().runAtomicAction(() -> {
+            List<ModelOperation<POMModel>> operations = new ArrayList<>();
+            operations.add(new AddMvnCompilerPluginForEnablePreview(newSourceLevel));
+            org.netbeans.modules.maven.model.Utilities.performPOMModelOperations(pom, operations);
         });
 
         ProjectConfiguration cfg = prj.getLookup().lookup(ProjectConfigurationProvider.class).getActiveConfiguration();
@@ -112,12 +107,9 @@ public class EnablePreviewMavenProj implements PreviewEnabler {
         CheckCanChangeSourceLevel canChange = new CheckCanChangeSourceLevel();
         try {
             final FileObject pom = prj.getProjectDirectory().getFileObject("pom.xml"); // NOI18N
-            pom.getFileSystem().runAtomicAction(new FileSystem.AtomicAction() {
-                @Override
-                public void run() throws IOException {
-                    List<ModelOperation<POMModel>> operations = Collections.singletonList(canChange);
-                    org.netbeans.modules.maven.model.Utilities.performPOMModelOperations(pom, operations);
-                }
+            pom.getFileSystem().runAtomicAction(() -> {
+                List<ModelOperation<POMModel>> operations = Collections.singletonList(canChange);
+                org.netbeans.modules.maven.model.Utilities.performPOMModelOperations(pom, operations);
             });
         } catch (IOException ex) {
             LOG.log(Level.FINE, null, ex);
@@ -199,16 +191,34 @@ public class EnablePreviewMavenProj implements PreviewEnabler {
                 build = factory.createBuild();
                 proj.setBuild(build);
             }
-
-            Plugin oldPlugin = searchMavenCompilerPlugin(build);
+            
+            PluginContainer container = build.getPluginManagement();
+            Plugin oldPlugin = searchMavenCompilerPlugin(container);
             if (oldPlugin == null) {
-                build.addPlugin(createMavenCompilerPlugin());
+                container = build;
+                oldPlugin = searchMavenCompilerPlugin(container);
+            }
+
+            if (oldPlugin == null) {
+                container.addPlugin(createMavenCompilerPlugin());
             } else {
                 Plugin newPlugin = updateMavenCompilerPlugin(oldPlugin);
-
-                build.removePlugin(oldPlugin);
-                build.addPlugin(newPlugin);
+                container.removePlugin(oldPlugin);
+                container.addPlugin(newPlugin);
             }
+        }
+
+        private Plugin searchMavenCompilerPlugin(final PluginContainer container) {
+            if (container == null || container.getPlugins() == null) {
+                return null;
+            }
+            for (Plugin plugin : container.getPlugins()) {
+                if ((plugin.getGroupId() == null || MAVEN_COMPILER_GROUP_ID.equals(plugin.getGroupId()))
+                        && MAVEN_COMPILER_ARTIFACT_ID.equals(plugin.getArtifactId())) {
+                    return plugin;
+                }
+            }
+            return null;
         }
 
         private Plugin createMavenCompilerPlugin() {
