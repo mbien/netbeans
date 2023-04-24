@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.apache.maven.artifact.versioning.ComparableVersion;
 import org.netbeans.api.annotations.common.NonNull;
 import org.netbeans.api.project.FileOwnerQuery;
 import org.openide.filesystems.FileObject;
@@ -252,14 +253,8 @@ public class EnablePreviewMavenProj implements PreviewEnabler {
                 currenConfig = createConfiguration();
             }
 
-            boolean supportsRelease = false;
-
-            try {
-                supportsRelease = version == null ||
-                                  new SpecificationVersion(version).compareTo(new SpecificationVersion("3.6")) >= 0;
-            } catch (NumberFormatException ignore) {
-                //ignore
-            }
+            boolean supportsRelease = version == null
+                    || new ComparableVersion(version).compareTo(new ComparableVersion("3.6")) >= 0;
 
             Map<POMExtensibilityElement, POMExtensibilityElement> old2New = new HashMap<>();
 
