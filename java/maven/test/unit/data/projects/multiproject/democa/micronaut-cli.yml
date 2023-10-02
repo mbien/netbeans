@@ -1,0 +1,6 @@
+applicationType: default
+defaultPackage: com.exampleca
+testFramework: junit
+sourceLanguage: java
+buildTool: maven
+features: [app-name, data, data-jdbc, flyway, gcn-bom, gcn-license, gcn-oci-cloud-app, gcn-oci-database, gcn-oci-objectstore, graalvm, http-client, java, java-application, jdbc-hikari, junit, logback, maven, maven-enforcer-plugin, netty-server, object-storage-oracle-cloud, oracle-cloud-atp, oracle-cloud-sdk, properties, readme, serialization-jackson, shade, test-resources, validation]
