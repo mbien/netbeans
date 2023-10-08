@@ -44,7 +44,6 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.WeakHashMap;
-import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -56,7 +55,6 @@ import org.apache.maven.artifact.DefaultArtifact;
 import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
 import org.apache.maven.cli.MavenCli;
 import org.apache.maven.execution.MavenExecutionRequest;
-import org.apache.maven.execution.MavenExecutionResult;
 import org.apache.maven.model.Model;
 import org.apache.maven.model.Resource;
 import org.apache.maven.model.building.ModelBuildingException;
@@ -129,9 +127,11 @@ public final class NbMavenProjectImpl implements Project {
     private static final Logger LOG = Logger.getLogger(NbMavenProjectImpl.class.getName());
     
     //sequential execution might be necesary for #166919
-    public static final RequestProcessor RELOAD_RP = new RequestProcessor("Maven project reloading", 1); //NOI18
+    //for project operations which should not interfere with each other; executes sequentially (FIFO)
+    private static final RequestProcessor SEQUENTIAL_RP = new RequestProcessor("Maven project operations", 1); //NOI18
+
     //minor optimization. In case the queue already holds the task and is not run, delay, if running reschedule.
-    private final RequestProcessor.Task reloadTask = RELOAD_RP.create(new Runnable() {
+    private final RequestProcessor.Task reloadTask = SEQUENTIAL_RP.create(new Runnable() {
         @Override
         public void run() {
             if (LOG.isLoggable(Level.FINE)) {
@@ -152,7 +152,7 @@ public final class NbMavenProjectImpl implements Project {
                 if (old != null && MavenProjectCache.isFallbackproject(prj)) {
                     prj.setPackaging(old.getPackaging()); //#229366 preserve packaging for broken projects to avoid changing lookup.
                 }
-                project = new SoftReference<MavenProject>(prj);
+                project = new SoftReference<>(prj);
                 if (hardReferencingMavenProject) {
                     hardRefProject = prj;
                 }
@@ -161,7 +161,7 @@ public final class NbMavenProjectImpl implements Project {
             ACCESSOR.doFireReload(watcher);
             reloadPossibleBrokenModules(old, prj);
         }
-    }, true);
+    });
     private final FileObject fileObject;
     private final FileObject folderFileObject;
     private final File projectFile;
@@ -407,9 +407,7 @@ public final class NbMavenProjectImpl implements Project {
     }
 
     public List<String> getCurrentActiveProfiles() {
-        List<String> toRet = new ArrayList<String>();
-        toRet.addAll(configProvider.getActiveConfiguration().getActivatedProfiles());
-        return toRet;
+        return new ArrayList<>(configProvider.getActiveConfiguration().getActivatedProfiles());
     }
 
 
@@ -589,52 +587,21 @@ public final class NbMavenProjectImpl implements Project {
     }
 
     /**
-     * Task that potential project reloads should wait on. If set, a {@link fireProjectReload}(true) will be scheduled only after this blocker finishes.
-     */
-    private RequestProcessor.Task reloadBlocker;
-
-    /**
-     * Schedules project operation that delays potential reloads. If a reload is posted, it will be performed only after
-     * this operation compeltes (successfully, or erroneously). Multiple project operations can be scheduled, an eventual project reload
-     * should happen after all those operations complete. It is possible to postpone project reload indefinitely, avoid unnecessary
-     * operation schedules.
+     * Schedules project operation for sequential execution with other operations (like reloads) which might interfere with each other.
      * <p>
-     * To avoid race condition on task startup, this method actually creates and schedules the task so it blocks reloads from its inception.
-     * It returns the value of the worker task as the result value. 
-     * wrapper.
-     * @param rp request processor that should schedule the task
+     * The returned task is already scheduled (and may have already run).
      * @param delay optional delay, use 0 for immediate run
      * @param r operation to run
      * @return the scheduled task
      */
-    public RequestProcessor.Task scheduleProjectOperation(RequestProcessor rp, Runnable r,  int delay) {
-        RequestProcessor.Task t = rp.create(r);
+    public RequestProcessor.Task scheduleProjectOperation(Runnable r, int delay) {
+        RequestProcessor.Task t = SEQUENTIAL_RP.create(r);
         if (Boolean.getBoolean("test.reload.sync")) {
             LOG.log(Level.FINE, "Running the blocking task synchronously (test.reload.sync set)");
             t.run();
             return t;
         } else {
-            synchronized (this) {
-                if (reloadBlocker == null) {
-                    LOG.log(Level.FINER, "Blocking project reload on task {0}", t);
-                    reloadBlocker = t;
-                } else {
-                    // will chain after existing reload blocker AND the new task.
-                    final RequestProcessor.Task t2 = RELOAD_RP.create(() -> {});
-                    LOG.log(Level.FINER, "Creating project blocker {0}, chain after existing blocker {1}", new Object[] { t2, t });
-                    reloadBlocker.addTaskListener((e) -> {
-                        t.addTaskListener((e2) -> {
-                            synchronized (NbMavenProjectImpl.this) {
-                                if (t2 == reloadBlocker) {
-                                    reloadBlocker = null;
-                                }
-                            }
-                            t2.run();
-                        });
-                    });
-                    reloadBlocker = t2;
-                }
-            }
+            LOG.log(Level.FINE, "Sheduling the task for sequential execution");
             t.schedule(delay);
             return t;
         }
@@ -661,33 +628,6 @@ public final class NbMavenProjectImpl implements Project {
             reloadTask.run();
             //for tests just do sync reload, even though silly, even sillier is to attempt to sync the threads..
         } else {
-            RequestProcessor.Task t;
-            synchronized (this) {
-                if (reloadBlocker != null && waitForBlockers) {
-                    // avoid holding the lock while potentially executing the listener in-line
-                    t = reloadBlocker;
-                } else {
-                    t = null;
-                }
-            }
-            if (t != null) {
-                final RequestProcessor.Task t2 = RELOAD_RP.create(() -> {});
-                LOG.log(Level.FINER, "Scheduling project reload retry after blocker {0} completes, Returning task {1}", new Object[] { t, t2 });
-                t.addTaskListener((e) -> {
-                    synchronized (NbMavenProjectImpl.this) {
-                        if (t == reloadBlocker) {
-                            reloadBlocker = null;
-                        }
-                    }
-                    fireProjectReload(true).addTaskListener((e2) -> {
-                        // mark the t2 task finished.
-                        if (!t2.isFinished()) {
-                            t2.run();
-                        }
-                    });
-                });
-                return t2;
-            }
             if (LOG.isLoggable(Level.FINER)) {
                 LOG.log(Level.FINER, "Scheduling prject reload {0}, no blocker found.", this);
                 LOG.log(Level.FINER, "Stack trace:", new Throwable());

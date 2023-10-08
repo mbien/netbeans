@@ -36,7 +36,6 @@ import org.netbeans.modules.maven.api.execute.RunUtils;
 import org.netbeans.modules.maven.execute.BeanRunConfig;
 import org.netbeans.modules.maven.execute.MavenProxySupport;
 import org.netbeans.modules.maven.execute.MavenProxySupport.ProxyResult;
-import org.netbeans.modules.maven.modelcache.MavenProjectCache;
 import org.netbeans.modules.maven.options.MavenSettings;
 import static org.netbeans.modules.maven.problems.Bundle.*;
 import org.netbeans.spi.project.ui.ProjectProblemResolver;
@@ -184,7 +183,7 @@ public class SanityBuildAction implements ProjectProblemResolver {
             }
             pendingResult = publicResult;
         }
-        ((NbMavenProjectImpl)this.nbproject).scheduleProjectOperation(MavenModelProblemsProvider.RP, toRet, 0);
+        ((NbMavenProjectImpl)this.nbproject).scheduleProjectOperation(toRet, 0);
         return publicResult;
     }
     
