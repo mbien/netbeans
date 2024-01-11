@@ -750,8 +750,8 @@ public class MergePanel extends javax.swing.JPanel implements java.awt.event.Act
     }
     
     private void showLine3(int line, int diffLength) {
-        linesComp3.setActiveLine(line);
-        linesComp3.repaint();
+//        linesComp3.setActiveLine(line);
+//        linesComp3.repaint();
     }
     
     private void setViewPosition(java.awt.Point p1, java.awt.Point p2) {
@@ -1571,13 +1571,13 @@ public class MergePanel extends javax.swing.JPanel implements java.awt.event.Act
     }
     
     public void highlightRegion3(int line1, int line2, java.awt.Color color) {
-        StyledDocument doc = (StyledDocument) jEditorPane3.getDocument();
-        ((MergePane)jEditorPane3).addHighlight(doc, line1, line2, color);
+//        StyledDocument doc = (StyledDocument) jEditorPane3.getDocument();
+//        ((MergePane)jEditorPane3).addHighlight(doc, line1, line2, color);
     }
     
     public void unhighlightRegion3(int line1, int line2) {
-        StyledDocument doc = (StyledDocument) jEditorPane3.getDocument();
-        ((MergePane)jEditorPane3).removeHighlight(doc, line1, line2);
+//        StyledDocument doc = (StyledDocument) jEditorPane3.getDocument();
+//        ((MergePane)jEditorPane3).removeHighlight(doc, line1, line2);
     }
     
     private void addEmptyLines(StyledDocument doc, int line, int numLines) {
