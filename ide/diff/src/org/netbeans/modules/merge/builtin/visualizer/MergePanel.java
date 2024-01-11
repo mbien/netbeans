@@ -31,6 +31,7 @@ import java.io.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.*;
+import javax.swing.event.ChangeEvent;
 import javax.swing.text.*;
 import org.netbeans.api.diff.Difference;
 import org.netbeans.api.editor.settings.SimpleValueNames;
@@ -94,19 +95,18 @@ public class MergePanel extends javax.swing.JPanel implements java.awt.event.Act
     private int numConflicts;
     private int numUnresolvedConflicts;
     private int currentConflictPos;
-    private final List<Integer> resolvedLeftConflictsLineNumbers = new ArrayList<Integer>();
-    private final List<Integer> resolvedRightConflictsLineNumbers = new ArrayList<Integer>();
-    private final List<Integer> resolvedLeftRightConflictsLineNumbers = new ArrayList<Integer>();
-    private final List<Integer> resolvedRightLeftConflictsLineNumbers = new ArrayList<Integer>();
+    private final List<Integer> resolvedLeftConflictsLineNumbers = new ArrayList<>();
+    private final List<Integer> resolvedRightConflictsLineNumbers = new ArrayList<>();
+    private final List<Integer> resolvedLeftRightConflictsLineNumbers = new ArrayList<>();
+    private final List<Integer> resolvedRightLeftConflictsLineNumbers = new ArrayList<>();
 
-    private ArrayList<ActionListener> controlListeners = new ArrayList<ActionListener>();
+    private final ArrayList<ActionListener> controlListeners = new ArrayList<>();
     
     private SystemAction[] systemActions = new SystemAction[] { SaveAction.get(SaveAction.class),
                                                                 null,
                                                                 CloseMergeViewAction.get(CloseMergeViewAction.class) };
 
     static final long serialVersionUID =3683458237532937983L;
-    private static final String PLAIN_TEXT_MIME = "text/plain";
     private Difference[] conflicts;
 
     /** Creates new DiffComponent from AbstractDiff object*/
@@ -483,14 +483,14 @@ public class MergePanel extends javax.swing.JPanel implements java.awt.event.Act
   public void setCurrentLine(final int line, final int diffLength, final int conflictPos,
                              final int resultLine) {
       if (line > 0) {
-          SwingUtilities.invokeLater(new Runnable() {
-              public void run() {
-                  showLine12(line, diffLength);
-                  showLine3(resultLine, diffLength);
-                  if (conflictPos >= 0) MergePanel.this.currentConflictPos = conflictPos;
-                  updateStatusLine();
-                  updateAcceptButtons(line);
+          SwingUtilities.invokeLater(() -> {
+              showLine12(line, diffLength);
+              showLine3(resultLine, diffLength);
+              if (conflictPos >= 0) {
+                  MergePanel.this.currentConflictPos = conflictPos;
               }
+              updateStatusLine();
+              updateAcceptButtons(line);
           });
       }
   }
@@ -514,7 +514,7 @@ public class MergePanel extends javax.swing.JPanel implements java.awt.event.Act
   }
   
   private void updateAcceptButtons(int linePos) {
-      Integer conflictPos = Integer.valueOf(linePos);
+      Integer conflictPos = linePos;
       boolean left = resolvedLeftConflictsLineNumbers.contains(conflictPos);
       boolean right = resolvedRightConflictsLineNumbers.contains(conflictPos);
       boolean leftRight = resolvedLeftRightConflictsLineNumbers.contains(conflictPos);
@@ -530,17 +530,13 @@ public class MergePanel extends javax.swing.JPanel implements java.awt.event.Act
   private void fireControlActionCommand(String command) {
       ArrayList<ActionListener> listeners;
       synchronized (this) {
-          listeners = new ArrayList<ActionListener>(controlListeners);
+          listeners = new ArrayList<>(controlListeners);
       }
       ActionEvent evt = new ActionEvent(this, 0, command);
       for (ActionListener l: listeners) {
           l.actionPerformed(evt);
       }
   }
-
-    private void jScrollBar1AdjustmentValueChanged (java.awt.event.AdjustmentEvent evt) {//GEN-FIRST:event_jScrollBar1AdjustmentValueChanged
-        // Add your handling code here:
-    }//GEN-LAST:event_jScrollBar1AdjustmentValueChanged
 
     private void closeButtonActionPerformed (java.awt.event.ActionEvent evt) {//GEN-FIRST:event_closeButtonActionPerformed
         // Add your handling code here:
@@ -572,91 +568,83 @@ public class MergePanel extends javax.swing.JPanel implements java.awt.event.Act
         fireControlActionCommand(ACTION_ACCEPT_RIGHT_LEFT);
     }//GEN-LAST:event_acceptRightLeftButtonActionPerformed
 
+    @SuppressWarnings("AssignmentToCollectionOrArrayFieldFromParameter")
     public void setSystemActions(SystemAction[] actions) {
         this.systemActions = actions;
     }
     
+    @SuppressWarnings("ReturnOfCollectionOrArrayField")
     public SystemAction[] getSystemActions() {
         return systemActions;
     }
     
     private void initActions() {
         jEditorPane1.addFocusListener(new FocusListener() {
-            public void focusGained(FocusEvent e) {
+            @Override public void focusGained(FocusEvent e) {
                 editorActivated(jEditorPane1);
             }
-            public void focusLost(FocusEvent e) {
+            @Override public void focusLost(FocusEvent e) {
                 editorDeactivated(jEditorPane1);
             }
         });
         jEditorPane2.addFocusListener(new FocusListener() {
-            public void focusGained(FocusEvent e) {
+            @Override public void focusGained(FocusEvent e) {
                 editorActivated(jEditorPane2);
             }
-            public void focusLost(FocusEvent e) {
+            @Override public void focusLost(FocusEvent e) {
                 editorDeactivated(jEditorPane2);
             }
         });
         jEditorPane3.addFocusListener(new FocusListener() {
-            public void focusGained(FocusEvent e) {
+            @Override public void focusGained(FocusEvent e) {
                 editorActivated(jEditorPane3);
             }
-            public void focusLost(FocusEvent e) {
+            @Override public void focusLost(FocusEvent e) {
                 editorDeactivated(jEditorPane3);
             }
         });
     }
     
-    private Hashtable<JEditorPane, Hashtable<Object, Action>> kitActions;
+    private final Map<JEditorPane, Map<Object, Action>> kitActions = new HashMap<>();
             /** Listener for copy action enabling  */
     private PropertyChangeListener copyL;
     private PropertyChangeListener copyP;
     
     private Action getAction (String s, JEditorPane editor) {
-        if (kitActions == null) {
-            kitActions = new Hashtable<JEditorPane, Hashtable<Object, Action>>();
-        }
-        Hashtable<Object, Action> actions = kitActions.get(editor);
+        Map<Object, Action> actions = kitActions.get(editor);
         if (actions == null) {
             EditorKit kit = editor.getEditorKit();
             if (kit == null) {
                 return null;
             }
-            
-            Action[] a = kit.getActions ();
-            actions = new Hashtable<Object, Action> (a.length);
-            int k = a.length;
-            for (int i = 0; i < k; i++)
-                actions.put (a[i].getValue (Action.NAME), a[i]);
+            actions = new HashMap<>();
+            for (Action action : kit.getActions()) {
+                actions.put(action.getValue(Action.NAME), action);
+            }
             kitActions.put(editor, actions);
         }
-        return actions.get (s);
+        return actions.get(s);
     }
     
     private void editorActivated(final JEditorPane editor) {
         //System.out.println("editor("+editor+") activated.");
         final Action copy = getAction (DefaultEditorKit.copyAction, editor);
         if (copy != null) {
-            final CallbackSystemAction sysCopy
-            = ((CallbackSystemAction) SystemAction.get (CopyAction.class));
-            final ActionPerformer perf = new ActionPerformer () {
-                public void performAction (SystemAction action) {
-                    copy.actionPerformed (new ActionEvent (editor, 0, "")); // NOI18N
-                }
+            final CallbackSystemAction sysCopy = ((CallbackSystemAction) SystemAction.get (CopyAction.class));
+            final ActionPerformer perf = (SystemAction action) -> {
+                copy.actionPerformed (new ActionEvent (editor, 0, "")); // NOI18N
             };
             sysCopy.setActionPerformer(copy.isEnabled() ? perf : null);
-            PropertyChangeListener copyListener;
-            copy.addPropertyChangeListener(copyListener = new PropertyChangeListener() {
-                public void propertyChange(PropertyChangeEvent evt) {
-                    if ("enabled".equals(evt.getPropertyName())) { // NOI18N
-                        if (((Boolean)evt.getNewValue()).booleanValue()) {
-                            sysCopy.setActionPerformer(perf);
-                        } else if (sysCopy.getActionPerformer() == perf) {
-                            sysCopy.setActionPerformer(null);
-                        }
+            PropertyChangeListener copyListener = (PropertyChangeEvent evt) -> {
+                if ("enabled".equals(evt.getPropertyName())) { // NOI18N
+                    if ((Boolean)evt.getNewValue()) {
+                        sysCopy.setActionPerformer(perf);
+                    } else if (sysCopy.getActionPerformer() == perf) {
+                        sysCopy.setActionPerformer(null);
                     }
                 }
-            });
+            };
+            copy.addPropertyChangeListener(copyListener);
             if (editor.equals(jEditorPane1)) copyL = copyListener;
             else copyP = copyListener;
         }
@@ -675,34 +663,30 @@ public class MergePanel extends javax.swing.JPanel implements java.awt.event.Act
     
 
     public void open() {
-        javax.swing.SwingUtilities.invokeLater(new Runnable() {
-            public void run() {
-                diffSplitPane.setDividerLocation(0.5);
-                mergeSplitPane.setDividerLocation(0.5);
-                openPostProcess();
-            }
+        javax.swing.SwingUtilities.invokeLater(() -> {
+            diffSplitPane.setDividerLocation(0.5);
+            mergeSplitPane.setDividerLocation(0.5);
+            openPostProcess();
         });
     }
 
     protected void openPostProcess() {
-        javax.swing.SwingUtilities.invokeLater(new Runnable() {
-            public void run() {
-                initGlobalSizes();
-                //showLine(1, 0);
-                addChangeListeners();
-/*                javax.swing.SwingUtilities.invokeLater(new Runnable() {
-                    public void run() {
-                        initGlobalSizes(); // do that again to be sure that components are initialized.
-                        javax.swing.SwingUtilities.invokeLater(new Runnable() {
-                            public void run() {
-                                syncFont(); // Components have to be fully initialized before font syncing
-                                addChangeListeners();
-                            }
-                        });
-                    }
-                });
+        javax.swing.SwingUtilities.invokeLater(() -> {
+            initGlobalSizes();
+            //showLine(1, 0);
+            addChangeListeners();
+/*            javax.swing.SwingUtilities.invokeLater(new Runnable() {
+                public void run() {
+                    initGlobalSizes(); // do that again to be sure that components are initialized.
+                    javax.swing.SwingUtilities.invokeLater(new Runnable() {
+                        public void run() {
+                            syncFont(); // Components have to be fully initialized before font syncing
+                            addChangeListeners();
+                        }
+                    });
+                }
+            });
  */
-            }
         });
     }
 
@@ -785,39 +769,35 @@ public class MergePanel extends javax.swing.JPanel implements java.awt.event.Act
         final JScrollBar scrollBarV2 = jScrollPane2.getVerticalScrollBar();
         final JScrollBar scrollBarH3 = resultScrollPane.getHorizontalScrollBar();
         final JScrollBar scrollBarV3 = resultScrollPane.getVerticalScrollBar();
-        scrollBarV1.getModel().addChangeListener(new javax.swing.event.ChangeListener()  {
-            public void stateChanged(javax.swing.event.ChangeEvent e) {
-                int value = scrollBarV1.getValue();
-                int oldValue = scrollBarV2.getValue();
-                if (oldValue != value) {
-                    scrollBarV2.setValue(value);
-//                    System.out.println("setting v2=" + value);
-//                    Thread.dumpStack();
-                }
-                // TODO use a better algorithm to adjust scrollbars, if there are large changes, this will not work optimally.
-                if (value == verticalScroll1ChangedValue) return ;
-                int max1 = scrollBarV1.getMaximum();
-                int max2 = scrollBarV3.getMaximum();
-                int ext1 = scrollBarV1.getModel().getExtent();
-                int ext2 = scrollBarV3.getModel().getExtent();
-                if (max1 == ext1) verticalScroll3ChangedValue = 0;
-                else verticalScroll3ChangedValue = (value*(max2 - ext2))/(max1 - ext1);
-                verticalScroll1ChangedValue = -1;
-                scrollBarV3.setValue(verticalScroll3ChangedValue);
+        scrollBarV1.getModel().addChangeListener((ChangeEvent e) -> {
+            int value = scrollBarV1.getValue();
+            int oldValue = scrollBarV2.getValue();
+            if (oldValue != value) {
+                scrollBarV2.setValue(value);
+//                System.out.println("setting v2=" + value);
+//                Thread.dumpStack();
             }
+            // TODO use a better algorithm to adjust scrollbars, if there are large changes, this will not work optimally.
+            if (value == verticalScroll1ChangedValue) return ;
+            int max1 = scrollBarV1.getMaximum();
+            int max2 = scrollBarV3.getMaximum();
+            int ext1 = scrollBarV1.getModel().getExtent();
+            int ext2 = scrollBarV3.getModel().getExtent();
+            if (max1 == ext1) verticalScroll3ChangedValue = 0;
+            else verticalScroll3ChangedValue = (value*(max2 - ext2))/(max1 - ext1);
+            verticalScroll1ChangedValue = -1;
+            scrollBarV3.setValue(verticalScroll3ChangedValue);
         });
         //jScrollPane1.setVerticalScrollBarPolicy(javax.swing.ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER);
         // The vertical scroll bar must be there for mouse wheel to work correctly.
         // However it's not necessary to be seen (but must be visible so that the wheel will work).
         jScrollPane1.getVerticalScrollBar().setPreferredSize(new Dimension(0, 0));
-        scrollBarV2.getModel().addChangeListener(new javax.swing.event.ChangeListener()  {
-            public void stateChanged(javax.swing.event.ChangeEvent e) {
-                int value = scrollBarV2.getValue();
-                int oldValue = scrollBarV1.getValue();
-                if (oldValue != value) {
-                    scrollBarV1.setValue(value);
-//                    System.out.println("setting v1 to=" + value);
-                }
+        scrollBarV2.getModel().addChangeListener((ChangeEvent e) -> {
+            int value = scrollBarV2.getValue();
+            int oldValue = scrollBarV1.getValue();
+            if (oldValue != value) {
+                scrollBarV1.setValue(value);
+//                System.out.println("setting v1 to=" + value);
             }
         });
         /* don't not let the result source vertical scrolling to influence the diff panels.
@@ -836,76 +816,70 @@ public class MergePanel extends javax.swing.JPanel implements java.awt.event.Act
             }
         });
          */
-        scrollBarH1.getModel().addChangeListener(new javax.swing.event.ChangeListener()  {
-            public void stateChanged(javax.swing.event.ChangeEvent e) {
-                int value = scrollBarH1.getValue();
-                //                System.out.println("stateChangedH1:value = "+value+", horizontalScroll1ChangedValue = "+horizontalScroll1ChangedValue);
-                if (value == horizontalScroll1ChangedValue) return;
-                int max1 = scrollBarH1.getMaximum();
-                int max2 = scrollBarH2.getMaximum();
-                int ext1 = scrollBarH1.getModel().getExtent();
-                int ext2 = scrollBarH2.getModel().getExtent();
-                if (max1 == ext1) horizontalScroll2ChangedValue = 0;
-                else horizontalScroll2ChangedValue = (value*(max2 - ext2))/(max1 - ext1);
-                horizontalScroll1ChangedValue = -1;
-                //                System.out.println("H1 value = "+value+" => H2 value = "+horizontalScroll2ChangedValue+"\t\tmax1 = "+max1+", max2 = "+max2);
-                scrollBarH2.setValue(horizontalScroll2ChangedValue);
-            }
+        scrollBarH1.getModel().addChangeListener((ChangeEvent e) -> {
+            int value = scrollBarH1.getValue();
+//            System.out.println("stateChangedH1:value = "+value+", horizontalScroll1ChangedValue = "+horizontalScroll1ChangedValue);
+            if (value == horizontalScroll1ChangedValue) return;
+            int max1 = scrollBarH1.getMaximum();
+            int max2 = scrollBarH2.getMaximum();
+            int ext1 = scrollBarH1.getModel().getExtent();
+            int ext2 = scrollBarH2.getModel().getExtent();
+            if (max1 == ext1) horizontalScroll2ChangedValue = 0;
+            else horizontalScroll2ChangedValue = (value*(max2 - ext2))/(max1 - ext1);
+            horizontalScroll1ChangedValue = -1;
+//            System.out.println("H1 value = "+value+" => H2 value = "+horizontalScroll2ChangedValue+"\t\tmax1 = "+max1+", max2 = "+max2);
+            scrollBarH2.setValue(horizontalScroll2ChangedValue);
         });
-        scrollBarH2.getModel().addChangeListener(new javax.swing.event.ChangeListener()  {
-            public void stateChanged(javax.swing.event.ChangeEvent e) {
-                int value = scrollBarH2.getValue();
-                //                System.out.println("stateChangedH2:value = "+value+", horizontalScroll2ChangedValue = "+horizontalScroll2ChangedValue);
-                if (value == horizontalScroll2ChangedValue) return;
-                int max1 = scrollBarH1.getMaximum();
-                int max2 = scrollBarH2.getMaximum();
-                int max3 = scrollBarH3.getMaximum();
-                int ext1 = scrollBarH1.getModel().getExtent();
-                int ext2 = scrollBarH2.getModel().getExtent();
-                int ext3 = scrollBarH3.getModel().getExtent();
-                if (max2 == ext2) {
-                    horizontalScroll1ChangedValue = 0;
-                    horizontalScroll3ChangedValue = 0;
-                } else {
-                    horizontalScroll1ChangedValue = (value*(max1 - ext1))/(max2 - ext2);
-                    horizontalScroll3ChangedValue = (value*(max3 - ext3))/(max2 - ext2);
-                }
-                horizontalScroll2ChangedValue = -1;
-                //                System.out.println("H2 value = "+value+" => H1 value = "+horizontalScroll1ChangedValue+"\t\tmax1 = "+max1+", max2 = "+max2);
-                scrollBarH1.setValue(horizontalScroll1ChangedValue);
-                scrollBarH3.setValue(horizontalScroll3ChangedValue);
+        scrollBarH2.getModel().addChangeListener((ChangeEvent e) -> {
+            int value = scrollBarH2.getValue();
+//            System.out.println("stateChangedH2:value = "+value+", horizontalScroll2ChangedValue = "+horizontalScroll2ChangedValue);
+            if (value == horizontalScroll2ChangedValue) return;
+            int max1 = scrollBarH1.getMaximum();
+            int max2 = scrollBarH2.getMaximum();
+            int max3 = scrollBarH3.getMaximum();
+            int ext1 = scrollBarH1.getModel().getExtent();
+            int ext2 = scrollBarH2.getModel().getExtent();
+            int ext3 = scrollBarH3.getModel().getExtent();
+            if (max2 == ext2) {
+                horizontalScroll1ChangedValue = 0;
+                horizontalScroll3ChangedValue = 0;
+            } else {
+                horizontalScroll1ChangedValue = (value*(max1 - ext1))/(max2 - ext2);
+                horizontalScroll3ChangedValue = (value*(max3 - ext3))/(max2 - ext2);
             }
+            horizontalScroll2ChangedValue = -1;
+//            System.out.println("H2 value = "+value+" => H1 value = "+horizontalScroll1ChangedValue+"\t\tmax1 = "+max1+", max2 = "+max2);
+            scrollBarH1.setValue(horizontalScroll1ChangedValue);
+            scrollBarH3.setValue(horizontalScroll3ChangedValue);
         });
-        scrollBarH3.getModel().addChangeListener(new javax.swing.event.ChangeListener()  {
-            public void stateChanged(javax.swing.event.ChangeEvent e) {
-                int value = scrollBarH3.getValue();
-                //                System.out.println("stateChangedH1:value = "+value+", horizontalScroll1ChangedValue = "+horizontalScroll1ChangedValue);
-                if (value == horizontalScroll3ChangedValue) return;
-                int max1 = scrollBarH1.getMaximum();
-                int max2 = scrollBarH2.getMaximum();
-                int max3 = scrollBarH3.getMaximum();
-                int ext1 = scrollBarH1.getModel().getExtent();
-                int ext2 = scrollBarH2.getModel().getExtent();
-                int ext3 = scrollBarH3.getModel().getExtent();
-                if (max3 == ext3) {
-                    horizontalScroll1ChangedValue = 0;
-                    horizontalScroll2ChangedValue = 0;
-                } else {
-                    horizontalScroll1ChangedValue = (value*(max1 - ext1))/(max3 - ext3);
-                    horizontalScroll2ChangedValue = (value*(max2 - ext2))/(max3 - ext3);
-                }
-                horizontalScroll3ChangedValue = -1;
-                //                System.out.println("H1 value = "+value+" => H2 value = "+horizontalScroll2ChangedValue+"\t\tmax1 = "+max1+", max2 = "+max2);
-                scrollBarH1.setValue(horizontalScroll1ChangedValue);
-                scrollBarH2.setValue(horizontalScroll2ChangedValue);
+        scrollBarH3.getModel().addChangeListener((ChangeEvent e) -> {
+            int value = scrollBarH3.getValue();
+//            System.out.println("stateChangedH1:value = "+value+", horizontalScroll1ChangedValue = "+horizontalScroll1ChangedValue);
+            if (value == horizontalScroll3ChangedValue) return;
+            int max1 = scrollBarH1.getMaximum();
+            int max2 = scrollBarH2.getMaximum();
+            int max3 = scrollBarH3.getMaximum();
+            int ext1 = scrollBarH1.getModel().getExtent();
+            int ext2 = scrollBarH2.getModel().getExtent();
+            int ext3 = scrollBarH3.getModel().getExtent();
+            if (max3 == ext3) {
+                horizontalScroll1ChangedValue = 0;
+                horizontalScroll2ChangedValue = 0;
+            } else {
+                horizontalScroll1ChangedValue = (value*(max1 - ext1))/(max3 - ext3);
+                horizontalScroll2ChangedValue = (value*(max2 - ext2))/(max3 - ext3);
             }
+            horizontalScroll3ChangedValue = -1;
+//            System.out.println("H1 value = "+value+" => H2 value = "+horizontalScroll2ChangedValue+"\t\tmax1 = "+max1+", max2 = "+max2);
+            scrollBarH1.setValue(horizontalScroll1ChangedValue);
+            scrollBarH2.setValue(horizontalScroll2ChangedValue);
         });
         diffSplitPane.setDividerLocation(0.5);
         mergeSplitPane.setDividerLocation(0.5);
     }
     
     private String strCharacters(char c, int num) {
-        StringBuffer s = new StringBuffer();
+        StringBuilder s = new StringBuilder();
         while(num-- > 0) {
             s.append(c);
         }
@@ -960,38 +934,26 @@ public class MergePanel extends javax.swing.JPanel implements java.awt.event.Act
     }
     
     private void addChangeListeners() {
-        jEditorPane1.addPropertyChangeListener("font", new java.beans.PropertyChangeListener() {
-            public void propertyChange(java.beans.PropertyChangeEvent evt) {
-                //System.out.println("1:evt = "+evt+", Property NAME = "+evt.getPropertyName());
-                javax.swing.SwingUtilities.invokeLater(new Runnable() {
-                    public void run() {
-                        initGlobalSizes();
-                        linesComp1.changedAll();
-                    }
-                });
-            }
+        jEditorPane1.addPropertyChangeListener("font", (PropertyChangeEvent evt) -> {
+            //System.out.println("1:evt = "+evt+", Property NAME = "+evt.getPropertyName());
+            javax.swing.SwingUtilities.invokeLater(() -> {
+                initGlobalSizes();
+                linesComp1.changedAll();
+            });
         });
-        jEditorPane2.addPropertyChangeListener("font", new java.beans.PropertyChangeListener() {
-            public void propertyChange(java.beans.PropertyChangeEvent evt) {
-                //System.out.println("2:evt = "+evt+", Property NAME = "+evt.getPropertyName());
-                javax.swing.SwingUtilities.invokeLater(new Runnable() {
-                    public void run() {
-                        initGlobalSizes();
-                        linesComp2.changedAll();
-                    }
-                });
-            }
+        jEditorPane2.addPropertyChangeListener("font", (PropertyChangeEvent evt) -> {
+            //System.out.println("2:evt = "+evt+", Property NAME = "+evt.getPropertyName());
+            javax.swing.SwingUtilities.invokeLater(() -> {
+                initGlobalSizes();
+                linesComp2.changedAll();
+            });
         });
-        jEditorPane3.addPropertyChangeListener("font", new java.beans.PropertyChangeListener() {
-            public void propertyChange(java.beans.PropertyChangeEvent evt) {
-                //System.out.println("2:evt = "+evt+", Property NAME = "+evt.getPropertyName());
-                javax.swing.SwingUtilities.invokeLater(new Runnable() {
-                    public void run() {
-                        initGlobalSizes();
-                        linesComp3.changedAll();
-                    }
-                });
-            }
+        jEditorPane3.addPropertyChangeListener("font", (PropertyChangeEvent evt) -> {
+            //System.out.println("2:evt = "+evt+", Property NAME = "+evt.getPropertyName());
+            javax.swing.SwingUtilities.invokeLater(() -> {
+                initGlobalSizes();
+                linesComp3.changedAll();
+            });
         });
     }
     
@@ -1164,7 +1126,7 @@ public class MergePanel extends javax.swing.JPanel implements java.awt.event.Act
      */
     public void replaceSource1InResult(int line1, int line2, int line3, int line4) {
         //System.out.println("replaceSource1InResult("+line1+", "+line2+", "+line3+", "+line4+")");
-        Integer conflictLine = Integer.valueOf((line1 > 0) ? line1 : 1);
+        Integer conflictLine = (line1 > 0) ? line1 : 1;
         // If trying to resolve the conflict twice simply return .
         if (resolvedLeftConflictsLineNumbers.contains(conflictLine)) return ;
         StyledDocument doc1 = (StyledDocument) jEditorPane1.getDocument();
@@ -1199,7 +1161,7 @@ public class MergePanel extends javax.swing.JPanel implements java.awt.event.Act
      */
     public void replaceSource2InResult(int line1, int line2, int line3, int line4) {
         //System.out.println("replaceSource2InResult("+line1+", "+line2+", "+line3+", "+line4+")");
-        Integer conflictLine = Integer.valueOf((line1 > 0) ? line1 : 1);
+        Integer conflictLine = (line1 > 0) ? line1 : 1;
         // If trying to resolve the conflict twice simply return .
         if (resolvedRightConflictsLineNumbers.contains(conflictLine)) return ;
         StyledDocument doc1 = (StyledDocument) jEditorPane2.getDocument();
@@ -1595,8 +1557,7 @@ public class MergePanel extends javax.swing.JPanel implements java.awt.event.Act
     }
     
     private void writeText(Writer w, String text) throws IOException {
-        text = text.replace("\n", System.getProperty("line.separator"));
-        w.write(text);
+        w.write(text.replace("\n", System.lineSeparator()));
     }
 
     public void highlightRegion1(int line1, int line2, java.awt.Color color) {
@@ -1623,7 +1584,7 @@ public class MergePanel extends javax.swing.JPanel implements java.awt.event.Act
         int lastOffset = doc.getEndPosition().getOffset();
         int totLines = org.openide.text.NbDocument.findLineNumber(doc, lastOffset);
         //int totLines = doc.getDefaultRootElement().getElementIndex(lastOffset);
-        int offset = lastOffset;
+        int offset;
         if (line <= totLines) {
             offset = org.openide.text.NbDocument.findLineOffset(doc, line);
             //offset = doc.getDefaultRootElement().getElement(line).getStartOffset();
