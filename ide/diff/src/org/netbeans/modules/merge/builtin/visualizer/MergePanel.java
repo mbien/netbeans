@@ -1074,8 +1074,6 @@ public class MergePanel extends javax.swing.JPanel implements java.awt.event.Act
         kit.install(jEditorPane3);
         jEditorPane3.putClientProperty(SimpleValueNames.CODE_FOLDING_ENABLE, false); //NOI18N
         jEditorPane3.setDocument(doc);
-        //jEditorPane2.setPage(url);
-        jEditorPane3.setEditable(false);
         customizeEditor(jEditorPane3);
         linesComp3 = new LinesComponent(jEditorPane3);
         resultScrollPane.setRowHeaderView(linesComp3);
