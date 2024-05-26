@@ -5,4 +5,3 @@ OpenIDE-Module-Localizing-Bundle: org/netbeans/lib/nbjshell9/Bundle.properties
 OpenIDE-Module-Specification-Version: 1.24
 OpenIDE-Module-Provides: jshell.implementation
 OpenIDE-Module-Package-Dependencies: [jdk.jshell.JShell]
-OpenIDE-Module-Java-Dependencies: Java > 9
