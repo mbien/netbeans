@@ -38,7 +38,7 @@ public class FreemarkerFactory implements ScriptEngineFactory {
 
     @Override
     public String getEngineVersion() {
-        return "2.3.32";
+        return "2.3.33";
     }
 
     @Override
@@ -53,7 +53,7 @@ public class FreemarkerFactory implements ScriptEngineFactory {
 
     @Override
     public String getLanguageVersion() {
-        return "2.3.32";
+        return "2.3.33";
     }
 
     @Override
