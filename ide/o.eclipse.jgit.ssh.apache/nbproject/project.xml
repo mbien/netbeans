@@ -23,15 +23,22 @@
     <type>org.netbeans.modules.apisupport.project</type>
     <configuration>
         <data xmlns="http://www.netbeans.org/ns/nb-module-project/2">
-            <code-name-base>org.eclipse.jgit.ssh.jsch</code-name-base>
+            <code-name-base>org.eclipse.jgit.ssh.apache</code-name-base>
             <module-dependencies>
                 <dependency>
-                    <code-name-base>com.jcraft.jsch</code-name-base>
-                    <compile-dependency/>
+                    <code-name-base>org.eclipse.jgit</code-name-base>
                     <run-dependency/>
                 </dependency>
                 <dependency>
-                    <code-name-base>org.eclipse.jgit</code-name-base>
+                    <code-name-base>o.apache.sshd</code-name-base>
+                    <run-dependency/>
+                </dependency>
+                <dependency>
+                    <code-name-base>o.apache.sshd.sftp</code-name-base>
+                    <run-dependency/>
+                </dependency>
+                <dependency>
+                    <code-name-base>n.i2p.crypto.eddsa</code-name-base>
                     <run-dependency/>
                 </dependency>
                 <dependency>
@@ -53,8 +60,8 @@
             </module-dependencies>
             <public-packages/>
             <class-path-extension>
-                <runtime-relative-path>org-eclipse-jgit-ssh-jsch.jar</runtime-relative-path>
-                <binary-origin>external/org.eclipse.jgit.ssh.jsch-6.10.0.202406032230-r.jar</binary-origin>
+                <runtime-relative-path>org-eclipse-jgit-ssh-apache.jar</runtime-relative-path>
+                <binary-origin>external/org.eclipse.jgit.ssh.apache-6.10.0.202406032230-r.jar</binary-origin>
             </class-path-extension>
         </data>
     </configuration>

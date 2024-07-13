@@ -26,12 +26,16 @@
             <code-name-base>org.netbeans.libs.git</code-name-base>
             <module-dependencies>
                 <dependency>
-                    <code-name-base>com.jcraft.jsch</code-name-base>
-                    <build-prerequisite/>
-                    <compile-dependency/>
-                    <run-dependency>
-                        <specification-version>0.1.55</specification-version>
-                    </run-dependency>
+                    <code-name-base>n.i2p.crypto.eddsa</code-name-base>
+                    <run-dependency/>
+                </dependency>
+                <dependency>
+                    <code-name-base>o.apache.sshd</code-name-base>
+                    <run-dependency/>
+                </dependency>
+                <dependency>
+                    <code-name-base>o.apache.sshd.sftp</code-name-base>
+                    <run-dependency/>
                 </dependency>
                 <dependency>
                     <code-name-base>org.eclipse.jgit</code-name-base>
@@ -39,23 +43,6 @@
                     <compile-dependency/>
                     <run-dependency>
                         <specification-version>6.7</specification-version>
-                    </run-dependency>
-                </dependency>
-                <dependency>
-                    <code-name-base>org.eclipse.jgit.ssh.jsch</code-name-base>
-                    <build-prerequisite/>
-                    <compile-dependency/>
-                    <run-dependency>
-                        <specification-version>6.7</specification-version>
-                    </run-dependency>
-                </dependency>
-                <dependency>
-                    <code-name-base>org.netbeans.libs.jsch.agentproxy</code-name-base>
-                    <build-prerequisite/>
-                    <compile-dependency/>
-                    <run-dependency>
-                        <release-version>2</release-version>
-                        <specification-version>1.0</specification-version>
                     </run-dependency>
                 </dependency>
             </module-dependencies>

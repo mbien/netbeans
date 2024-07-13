@@ -1,0 +1,1 @@
+OpenIDE-Module: n.i2p.crypto.eddsa
