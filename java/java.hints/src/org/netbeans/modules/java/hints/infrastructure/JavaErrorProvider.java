@@ -100,7 +100,9 @@ public class JavaErrorProvider implements ErrorProvider {
         try {
             // This reflective approach is the most convenient way to access the getSubfixes method
             // without changing module dependencies or complicating things further
-            Class<?> controller = Class.forName("org.netbeans.modules.editor.hints.HintsControllerImpl");
+            Class<?> controller = Class.forName("org.netbeans.modules.editor.hints.HintsControllerImpl",
+                    false,
+                    ErrorDescription.class.getClassLoader());
             getSubfixesMethod = controller.getDeclaredMethod("getSubfixes", Fix.class);
         } catch (ReflectiveOperationException ex) {
             Logger.getLogger(JavaErrorProvider.class.getName()).log(Level.SEVERE,
