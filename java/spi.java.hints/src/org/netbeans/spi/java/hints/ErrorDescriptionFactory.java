@@ -491,9 +491,6 @@ public class ErrorDescriptionFactory {
         public void performRewrite(TransformationContext ctx) throws IOException {
             WorkingCopy copy = ctx.getWorkingCopy();
             TreePath path = ctx.getPath();
-            
-            copy.toPhase(Phase.RESOLVED); //XXX: performance
-            TreePath path = handle.resolve(copy);
 
             while (path != null && path.getLeaf().getKind() != Kind.COMPILATION_UNIT && !DECLARATION.contains(path.getLeaf().getKind())) {
                 path = path.getParentPath();
