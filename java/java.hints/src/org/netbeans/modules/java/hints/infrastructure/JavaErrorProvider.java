@@ -23,7 +23,6 @@ import com.sun.source.tree.LineMap;
 import com.sun.source.util.TreePath;
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -37,8 +36,6 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.prefs.Preferences;
 import javax.lang.model.element.Element;
 import org.netbeans.api.editor.mimelookup.MimeRegistration;
@@ -94,33 +91,6 @@ public class JavaErrorProvider implements ErrorProvider {
 
     public static final String HINTS_TOOL_ID = "hints";
     public static Consumer<ErrorProvider.Kind> computeDiagsCallback; //for tests
-    private static Method getSubfixesMethod;
-
-    static {
-        try {
-            // This reflective approach is the most convenient way to access the getSubfixes method
-            // without changing module dependencies or complicating things further
-            Class<?> controller = Class.forName("org.netbeans.modules.editor.hints.HintsControllerImpl",
-                    false,
-                    ErrorDescription.class.getClassLoader());
-            getSubfixesMethod = controller.getDeclaredMethod("getSubfixes", Fix.class);
-        } catch (ReflectiveOperationException ex) {
-            Logger.getLogger(JavaErrorProvider.class.getName()).log(Level.SEVERE,
-                    "Failed to initialize reflective method. Implementation may have changed, update needed.", ex);
-        }
-    }
-
-    private static Iterable<Fix> getSubfixes(Fix f) {
-        if (getSubfixesMethod != null) {
-            try {
-                return (Iterable<Fix>) getSubfixesMethod.invoke(null, f);
-            } catch (ReflectiveOperationException ex) {
-                Logger.getLogger(JavaErrorProvider.class.getName()).log(Level.WARNING,
-                        "Failed to invoke getSubfixes method", ex);
-            }
-        }
-        return Collections.emptyList();
-    }
 
     @Override
     public List<? extends Diagnostic> computeErrors(Context context) {
@@ -239,7 +209,7 @@ public class JavaErrorProvider implements ErrorProvider {
 
         for (Fix f : baseFixes) {
             fixesAndSubfixes.add(Pair.of(f, true));
-            for (Fix subFix : getSubfixes(f)) {
+            for (Fix subFix : f.getSubfixes()) {
                 fixesAndSubfixes.add(Pair.of(subFix, false));
             }
         }
