@@ -52,7 +52,12 @@ public class Unused {
     @BooleanOption(displayName="#LBL_UnusedPackagePrivate", tooltip="#TP_UnusedPackagePrivate", defaultValue=DETECT_UNUSED_PACKAGE_PRIVATE_DEFAULT)
     public static final String DETECT_UNUSED_PACKAGE_PRIVATE = "detect.unused.package.private";
 
-    @TriggerTreeKind(Kind.COMPILATION_UNIT)
+    @TriggerTreeKind({
+        //class-like kinds:
+        Kind.ANNOTATION_TYPE, Kind.CLASS, Kind.ENUM, Kind.INTERFACE, Kind.RECORD,
+        Kind.VARIABLE,
+        Kind.METHOD
+    })
     public static List<ErrorDescription> unused(HintContext ctx) {
         List<UnusedDescription> unused = UnusedDetector.findUnused(ctx.getInfo(), () -> ctx.isCanceled());
         List<ErrorDescription> result = new ArrayList<>(unused.size());
@@ -60,6 +65,9 @@ public class Unused {
         for (UnusedDescription ud : unused) {
             if (ctx.isCanceled()) {
                 break;
+            }
+            if (ud.unusedElementPath.getLeaf() != ctx.getPath().getLeaf()) {
+                continue;
             }
             if (!detectUnusedPackagePrivate && ud.packagePrivate) {
                 continue;
