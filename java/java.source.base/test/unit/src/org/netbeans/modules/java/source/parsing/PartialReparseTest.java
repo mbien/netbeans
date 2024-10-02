@@ -71,6 +71,7 @@ public class PartialReparseTest extends NbTestCase {
     @Override
     protected void setUp() throws Exception {
         super.setUp();
+        clearWorkDir();
         SourceUtilsTestUtil.prepareTest(new String[0], new Object[0]);
         // ensure JavaKit is present, so that NbEditorDocument is eventually created.
         // it handles PositionRefs differently than PlainDocument/PlainEditorKit.
@@ -385,7 +386,7 @@ public class PartialReparseTest extends NbTestCase {
 
     private void doRunTest(String code, String inject, Consumer<CompilationInfo> callback) throws Exception {
 
-        FileObject srcDir = FileUtil.createMemoryFileSystem().getRoot();
+        FileObject srcDir = FileUtil.createFolder(getWorkDir());
         FileObject src = srcDir.createData("Test.java");
 
         // parse original source
@@ -437,7 +438,7 @@ public class PartialReparseTest extends NbTestCase {
 
     private void doVerifyFullReparse(String code, String inject) throws Exception {
 
-        FileObject srcDir = FileUtil.createMemoryFileSystem().getRoot();
+        FileObject srcDir = FileUtil.createFolder(getWorkDir());
         FileObject src = srcDir.createData("Test.java");
 
         // parse original source
