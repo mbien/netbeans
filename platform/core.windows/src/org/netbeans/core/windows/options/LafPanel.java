@@ -225,8 +225,9 @@ public class LafPanel extends javax.swing.JPanel {
 
     private LookAndFeelInfo getCurrentLaF() {
         LookAndFeelInfo currentLaf = null;
-        String currentLAFClassName = UIManager.getLookAndFeel().getClass().getName();
-        boolean isAqua = "Aqua".equals(UIManager.getLookAndFeel().getID()); //NOI18N
+        LookAndFeel laf = UIManager.getLookAndFeel();
+        String currentLAFClassName = laf.getClass().getName();
+        boolean isAqua = "Aqua".equals(laf.getID()); //NOI18N
         for (LookAndFeelInfo li : UIManager.getInstalledLookAndFeels()) {
             if (currentLAFClassName.equals(li.getClassName())
                     || (isAqua && li.getClassName().contains("com.apple.laf.AquaLookAndFeel"))) { //NOI18N
@@ -234,23 +235,23 @@ public class LafPanel extends javax.swing.JPanel {
                 break;
             }
         }
-        return currentLaf;
+        return currentLaf == null ? new LookAndFeelInfo(laf.getName(), currentLAFClassName) : currentLaf;
     }
 
     private LookAndFeelInfo getPreferredLaF() {
         String lafClassName = NbPreferences.root().node( "laf" ).get( "laf", null ); //NOI18N
         if( null == lafClassName )
             return getCurrentLaF();
-        LookAndFeelInfo currentLaf = null;
+        LookAndFeelInfo prefLaf = null;
         boolean isAqua = "Aqua".equals(UIManager.getLookAndFeel().getID()); //NOI18N
         for (LookAndFeelInfo li : UIManager.getInstalledLookAndFeels()) {
             if (lafClassName.equals(li.getClassName())
                     || (isAqua && li.getClassName().contains("com.apple.laf.AquaLookAndFeel"))) { //NOI18N
-                currentLaf = li;
+                prefLaf = li;
                 break;
             }
         }
-        return currentLaf;
+        return prefLaf == null ? getCurrentLaF() : prefLaf;
     }
 
     private static Notification restartNotification;
