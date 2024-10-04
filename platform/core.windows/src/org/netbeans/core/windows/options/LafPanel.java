@@ -27,6 +27,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -202,8 +203,19 @@ public class LafPanel extends javax.swing.JPanel {
 
     private void initLookAndFeel() {
         lafs.clear();
-        for( LookAndFeelInfo i : UIManager.getInstalledLookAndFeels() ) {
-            lafs.add( i );
+        String lafExcludes = NbBundle.getMessage(LafPanel.class, "Laf_Excludes").trim();
+        if (lafExcludes.isEmpty()) {
+            lafs.addAll(Arrays.asList(UIManager.getInstalledLookAndFeels()));
+        } else {
+            String cur = getCurrentLaF().getClassName();
+            String pref = getPreferredLaF().getClassName();
+            for (LookAndFeelInfo li : UIManager.getInstalledLookAndFeels()) {
+                String cls = li.getClassName();
+                String name = cls.substring(cls.lastIndexOf('.') + 1, cls.length());
+                if (cls.equals(cur) || cls.equals(pref) || !lafExcludes.contains(name)) {
+                    lafs.add(li);
+                }
+            }
         }
     }
 
@@ -215,9 +227,9 @@ public class LafPanel extends javax.swing.JPanel {
         LookAndFeelInfo currentLaf = null;
         String currentLAFClassName = UIManager.getLookAndFeel().getClass().getName();
         boolean isAqua = "Aqua".equals(UIManager.getLookAndFeel().getID()); //NOI18N
-        for( LookAndFeelInfo li : lafs ) {
-            if( currentLAFClassName.equals( li.getClassName() ) 
-                    || (isAqua && li.getClassName().contains("com.apple.laf.AquaLookAndFeel")) ) { //NOI18N
+        for (LookAndFeelInfo li : UIManager.getInstalledLookAndFeels()) {
+            if (currentLAFClassName.equals(li.getClassName())
+                    || (isAqua && li.getClassName().contains("com.apple.laf.AquaLookAndFeel"))) { //NOI18N
                 currentLaf = li;
                 break;
             }
@@ -231,9 +243,9 @@ public class LafPanel extends javax.swing.JPanel {
             return getCurrentLaF();
         LookAndFeelInfo currentLaf = null;
         boolean isAqua = "Aqua".equals(UIManager.getLookAndFeel().getID()); //NOI18N
-        for( LookAndFeelInfo li : lafs ) {
-            if( lafClassName.equals( li.getClassName() )
-                    || (isAqua && li.getClassName().contains("com.apple.laf.AquaLookAndFeel")) ) { //NOI18N
+        for (LookAndFeelInfo li : UIManager.getInstalledLookAndFeels()) {
+            if (lafClassName.equals(li.getClassName())
+                    || (isAqua && li.getClassName().contains("com.apple.laf.AquaLookAndFeel"))) { //NOI18N
                 currentLaf = li;
                 break;
             }
