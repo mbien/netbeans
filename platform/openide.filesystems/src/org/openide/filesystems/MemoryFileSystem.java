@@ -277,6 +277,10 @@ final class MemoryFileSystem extends AbstractFileSystem implements AbstractFileS
     public OutputStream outputStream(final String name) throws java.io.IOException {
         return new ByteArrayOutputStream() {
             private final Entry entry = getOrCreateEntry(name);
+            
+            {
+                modified();
+            }
 
             @Override
             public synchronized void write(int b) {
@@ -298,7 +302,11 @@ final class MemoryFileSystem extends AbstractFileSystem implements AbstractFileS
             }
 
             private void modified() {
-                entry.last = Instant.now();
+                Instant now = Instant.now();
+                if (entry.last != null && (entry.last.equals(now) || entry.last.isAfter(now))) {
+                    throw new IllegalStateException("last: " + entry.last + " now: " + now);
+                }                
+                entry.last = now;
             }
         };
     }
