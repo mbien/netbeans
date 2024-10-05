@@ -32,6 +32,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLStreamHandler;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
@@ -63,7 +64,7 @@ final class MemoryFileSystem extends AbstractFileSystem implements AbstractFileS
     /** time when the filesystem was created. It is supposed to be the default
      * time of modification for all resources that has not been modified yet
      */
-    private Date created = new Date();
+    private final Instant created = Instant.now();
 
     /** maps String to Entry */
     private final Map<String, Entry> entries = initEntry();
@@ -255,9 +256,8 @@ final class MemoryFileSystem extends AbstractFileSystem implements AbstractFileS
 
     @Override
     public Date lastModified(String name) {
-        Date d = getOrCreateEntry(name).last;
-
-        return (d == null) ? created : d;
+        Instant modified = getOrCreateEntry(name).last;
+        return Date.from(modified == null ? created : modified);
     }
 
     @Override
@@ -281,20 +281,24 @@ final class MemoryFileSystem extends AbstractFileSystem implements AbstractFileS
             @Override
             public synchronized void write(int b) {
                 super.write(b);
-                entry.last = new Date();
+                modified();
             }
 
             @Override
             public synchronized void write(byte[] b, int off, int len) {
                 super.write(b, off, len);
-                entry.last = new Date();
+                modified();
             }
 
             @Override
             public void close() throws IOException {
                 super.close();
                 entry.data = toByteArray();
-                entry.last = new Date();
+                modified();
+            }
+
+            private void modified() {
+                entry.last = Instant.now();
             }
         };
     }
@@ -385,7 +389,7 @@ final class MemoryFileSystem extends AbstractFileSystem implements AbstractFileS
     static final class Entry {
         public Map<String, Object> attrs = Collections.synchronizedMap(new HashMap<>());
         public byte[] data;
-        public Date last;
+        public Instant last;
 	private final String entryName;
 
 	Entry(String entryName) {
