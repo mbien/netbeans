@@ -397,7 +397,7 @@ final class MemoryFileSystem extends AbstractFileSystem implements AbstractFileS
     static final class Entry {
         public Map<String, Object> attrs = Collections.synchronizedMap(new HashMap<>());
         public byte[] data;
-        public Instant last;
+        public Instant last = Instant.now();
 	private final String entryName;
 
 	Entry(String entryName) {
