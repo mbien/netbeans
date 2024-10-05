@@ -274,19 +274,29 @@ final class MemoryFileSystem extends AbstractFileSystem implements AbstractFileS
     }
 
     @Override
-    public OutputStream outputStream(final String name)
-    throws java.io.IOException {
-        class Out extends ByteArrayOutputStream {
+    public OutputStream outputStream(final String name) throws java.io.IOException {
+        return new ByteArrayOutputStream() {
+            private final Entry entry = getOrCreateEntry(name);
+
+            @Override
+            public synchronized void write(int b) {
+                super.write(b);
+                entry.last = new Date();
+            }
+
+            @Override
+            public synchronized void write(byte[] b, int off, int len) {
+                super.write(b, off, len);
+                entry.last = new Date();
+            }
+
             @Override
             public void close() throws IOException {
                 super.close();
-                Entry entry = getOrCreateEntry(name);
                 entry.data = toByteArray();
                 entry.last = new Date();
             }
-        }
-
-        return new Out();
+        };
     }
 
     @Override
