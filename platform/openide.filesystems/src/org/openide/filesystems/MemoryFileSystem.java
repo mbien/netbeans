@@ -32,13 +32,13 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLStreamHandler;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -64,7 +64,7 @@ final class MemoryFileSystem extends AbstractFileSystem implements AbstractFileS
     /** time when the filesystem was created. It is supposed to be the default
      * time of modification for all resources that has not been modified yet
      */
-    private java.util.Date created = new java.util.Date();
+    private final Instant created = Instant.now();
 
     /** maps String to Entry */
     private final Map<String, Entry> entries = initEntry();
@@ -80,7 +80,6 @@ final class MemoryFileSystem extends AbstractFileSystem implements AbstractFileS
         list = this;
         change = this;
         info = this;
-
         
         try {
             _setSystemName("MemoryFileSystem" + String.valueOf(id));
@@ -93,11 +92,7 @@ final class MemoryFileSystem extends AbstractFileSystem implements AbstractFileS
     public MemoryFileSystem(String[] resources) {
         this();
 
-        StringBuffer sb = new StringBuffer();
-
         for (int i = 0; i < resources.length; i++) {
-            sb.append(resources[i]);
-
             if (resources[i].endsWith("/")) {
                 // folder
                 getOrCreateEntry(resources[i]).data = null;
@@ -126,8 +121,6 @@ final class MemoryFileSystem extends AbstractFileSystem implements AbstractFileS
         }
     }
 
-	
-
     private boolean isValidEntry(String n) {
 	return isValidEntry(n, null);
     }
@@ -151,7 +144,7 @@ final class MemoryFileSystem extends AbstractFileSystem implements AbstractFileS
             }   
         }
 
-	if (ERR.isLoggable(Level.FINE) && expectedResult != null && retval != expectedResult.booleanValue()) {
+	if (ERR.isLoggable(Level.FINE) && expectedResult != null && retval != expectedResult) {
 	    logMessage("entry: " + x +  " isValidReference.fo: " + ((fo == null) ? "null" : //NOI18N
 		(fo.isValid() ? "valid" : "invalid")));//NOI18N
 	}
@@ -159,14 +152,17 @@ final class MemoryFileSystem extends AbstractFileSystem implements AbstractFileS
         return (retval);
     }
 
+    @Override
     public String getDisplayName() {
         return "MemoryFileSystem";
     }
 
+    @Override
     public boolean isReadOnly() {
         return false;
     }
 
+    @Override
     public Enumeration<String> attributes(String name) {
         if (!isValidEntry(name)) {
             return org.openide.util.Enumerations.empty();
@@ -174,6 +170,7 @@ final class MemoryFileSystem extends AbstractFileSystem implements AbstractFileS
         return Collections.enumeration(getOrCreateEntry(name).attrs.keySet());
     }
 
+    @Override
     public String[] children(String f) {
         if ((f.length() > 0) && (f.charAt(0) == '/')) {
             f = f.substring(1);
@@ -183,7 +180,7 @@ final class MemoryFileSystem extends AbstractFileSystem implements AbstractFileS
             f = f + "/";
         }
 
-        Set<String> l = new HashSet<String>();
+        Set<String> l = new HashSet<>();
 
         //System.out.println("Folder: " + f);
         synchronized(entries) {
@@ -208,9 +205,10 @@ final class MemoryFileSystem extends AbstractFileSystem implements AbstractFileS
         }
     }
 
+    @Override
     public void createData(String name) throws IOException {
         if (isValidEntry(name, Boolean.FALSE)) {
-	    StringBuffer message = new StringBuffer();
+	    StringBuilder message = new StringBuilder();
 	    message.append("File already exists: ").append(name);
             throw new IOException(message.toString());//NOI18N
         }
@@ -218,9 +216,10 @@ final class MemoryFileSystem extends AbstractFileSystem implements AbstractFileS
         getOrCreateEntry(name).data = new byte[0];
     }
 
+    @Override
     public void createFolder(String name) throws java.io.IOException {
         if (isValidEntry(name, Boolean.FALSE)) {
-	    StringBuffer message = new StringBuffer();
+	    StringBuilder message = new StringBuilder();
 	    message.append("Folder already exists: ").append(name);
             throw new IOException(message.toString());//NOI18N
         }
@@ -228,19 +227,23 @@ final class MemoryFileSystem extends AbstractFileSystem implements AbstractFileS
         getOrCreateEntry(name).data = null;
     }
 
+    @Override
     public void delete(String name) throws IOException {
         if (entries.remove(name) == null) {
             throw new IOException("No file to delete: " + name); // NOI18N
         }
     }
 
+    @Override
     public void deleteAttributes(String name) {
     }
 
+    @Override
     public boolean folder(String name) {
         return getOrCreateEntry(name).data == null;
     }
 
+    @Override
     public InputStream inputStream(String name) throws java.io.FileNotFoundException {
         byte[] arr = getOrCreateEntry(name).data;
 
@@ -251,41 +254,69 @@ final class MemoryFileSystem extends AbstractFileSystem implements AbstractFileS
         return new ByteArrayInputStream(arr);
     }
 
-    public java.util.Date lastModified(String name) {
-        java.util.Date d = getOrCreateEntry(name).last;
-
-        return (d == null) ? created : d;
+    @Override
+    public Date lastModified(String name) {
+        Instant modified = getOrCreateEntry(name).last;
+        return Date.from(modified == null ? created : modified);
     }
 
+    @Override
     public void lock(String name) throws IOException {
     }
 
+    @Override
     public void markUnimportant(String name) {
     }
 
+    @Override
     public String mimeType(String name) {
         return (String) getOrCreateEntry(name).attrs.get("mimeType");
     }
 
-    public OutputStream outputStream(final String name)
-    throws java.io.IOException {
-        class Out extends ByteArrayOutputStream {
+    @Override
+    public OutputStream outputStream(final String name) throws java.io.IOException {
+        return new ByteArrayOutputStream() {
+            private final Entry entry = getOrCreateEntry(name);
+            
+            {
+                modified();
+            }
+
+            @Override
+            public synchronized void write(int b) {
+                super.write(b);
+                modified();
+            }
+
+            @Override
+            public synchronized void write(byte[] b, int off, int len) {
+                super.write(b, off, len);
+                modified();
+            }
+
             @Override
             public void close() throws IOException {
                 super.close();
-
-                getOrCreateEntry(name).data = toByteArray();
-                getOrCreateEntry(name).last = new Date();
+                entry.data = toByteArray();
+                modified();
             }
-        }
 
-        return new Out();
+            private void modified() {
+                Instant now = Instant.now();
+                if (entry.last != null && (entry.last.equals(now) || entry.last.isAfter(now))) {
+                    throw new IllegalStateException("last: " + entry.last + " now: " + now);
+                }                
+                entry.last = now;
+            }
+        };
     }
 
+    @Override
     public Object readAttribute(String name, String attrName) {
         return isValidEntry(name) ? getOrCreateEntry(name).attrs.get(attrName) : null;
     }
 
+    @Override
     public boolean readOnly(String name) {
         return false;
     }
@@ -305,7 +336,7 @@ final class MemoryFileSystem extends AbstractFileSystem implements AbstractFileS
             newName = newName.substring(1);
         }
         
-        ArrayList<Map.Entry<String, Entry>> clone = new ArrayList<Map.Entry<String, Entry>>(entries.entrySet());
+        ArrayList<Map.Entry<String, Entry>> clone = new ArrayList<>(entries.entrySet());
         for (Map.Entry<String, Entry> each : clone) {
             if (each.getKey().startsWith(oldName)) {
                 entries.remove(each.getKey());
@@ -315,18 +346,22 @@ final class MemoryFileSystem extends AbstractFileSystem implements AbstractFileS
         }
     }
 
+    @Override
     public void renameAttributes(String oldName, String newName) {
     }
 
+    @Override
     public long size(String name) {
         byte[] d = getOrCreateEntry(name).data;
 
         return (d == null) ? 0 : d.length;
     }
 
+    @Override
     public void unlock(String name) {
     }
 
+    @Override
     public void writeAttribute(String name, String attrName, Object value)
     throws IOException {
         getOrCreateEntry(name).attrs.put(attrName, value);
@@ -334,7 +369,7 @@ final class MemoryFileSystem extends AbstractFileSystem implements AbstractFileS
 
     private Map<String, Entry> initEntry() {
         if (!ERR.isLoggable(Level.FINE)) {
-            return new ConcurrentHashMap<String, MemoryFileSystem.Entry>();
+            return new ConcurrentHashMap<>();
         }
 
 	return new ConcurrentHashMap<String, MemoryFileSystem.Entry>() {
@@ -360,19 +395,18 @@ final class MemoryFileSystem extends AbstractFileSystem implements AbstractFileS
     }
     
     static final class Entry {
-        /** String, Object */
-        public Map<String, Object> attrs = Collections.synchronizedMap(new HashMap<String, Object>());
+        public Map<String, Object> attrs = Collections.synchronizedMap(new HashMap<>());
         public byte[] data;
-        public java.util.Date last;
+        public Instant last = Instant.now();
 	private final String entryName;
 
 	Entry(String entryName) {
 	    this.entryName = entryName;
 	}
 	
-
+        @Override
 	public String toString() {
-	    StringBuffer sb = new StringBuffer();
+	    StringBuilder sb = new StringBuilder();
 	    sb.append(" [").append(entryName);//NOI18N
 	    sb.append(" -> ").append(super.toString());//NOI18N
 	    sb.append("] ");
@@ -380,9 +414,8 @@ final class MemoryFileSystem extends AbstractFileSystem implements AbstractFileS
 	}
     }
     
-    
     private static void logMessage(final String message) {
-        StringBuffer sb = new StringBuffer();
+        StringBuilder sb = new StringBuilder();
         sb.append(" -> ").append(message);
 
         //ucomment if necessary
@@ -398,7 +431,7 @@ final class MemoryFileSystem extends AbstractFileSystem implements AbstractFileS
     // Support for URLs of the form memory://fs23/folder/file
     @ServiceProvider(service=URLMapper.class)
     public static final class Mapper extends URLMapper {
-        private static final Map<Long,Reference<FileSystem>> filesystems = new HashMap<Long,Reference<FileSystem>>(); // i.e. a sparse array by id
+        private static final Map<Long,Reference<FileSystem>> filesystems = new HashMap<>(); // i.e. a sparse array by id
         public @Override URL getURL(FileObject fo, int type) {
             if (type != URLMapper.INTERNAL) {
                 return null;
@@ -422,7 +455,7 @@ final class MemoryFileSystem extends AbstractFileSystem implements AbstractFileS
             synchronized (filesystems) {
                 Reference<FileSystem> r = filesystems.get(fs.id);
                 if (r == null || r.get() == null) {
-                    r = new WeakReference<FileSystem>(fs);
+                    r = new WeakReference<>(fs);
                     filesystems.put(fs.id, r);
                 }
             }
@@ -443,7 +476,7 @@ final class MemoryFileSystem extends AbstractFileSystem implements AbstractFileS
             }
             Reference<FileSystem> r;
             synchronized (filesystems) {
-                r = filesystems.get(Long.parseLong(m.group(1)));
+                r = filesystems.get(Long.valueOf(m.group(1)));
             }
             if (r == null) {
                 return null;
@@ -465,7 +498,6 @@ final class MemoryFileSystem extends AbstractFileSystem implements AbstractFileS
         protected @Override URLConnection openConnection(URL u) throws IOException {
             return new MemoryConnection(u);
         }
-
 
         @Override
         protected int hashCode(URL u) {

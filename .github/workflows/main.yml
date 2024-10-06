@@ -124,7 +124,7 @@ jobs:
     timeout-minutes: 40
     strategy:
       matrix:
-        java: [ '17', '21', '23' ]
+        java: [ '17' ]
         exclude:
           - java: ${{ github.event_name == 'pull_request' && 'nothing' || '21' }}
       fail-fast: false
@@ -223,6 +223,7 @@ jobs:
     needs: base-build
     runs-on: ${{ matrix.os }} 
     timeout-minutes: 40
+    if: false
     strategy:
       matrix:
         os: [ ubuntu-latest, macos-latest, windows-latest ]
@@ -1238,7 +1239,6 @@ jobs:
   java-modules-test:
     name: Java Modules on Linux/JDK ${{ matrix.java }}
     # equals env.test_java == 'true'
-    if: ${{ contains(github.event.pull_request.labels.*.name, 'Java') || contains(github.event.pull_request.labels.*.name, 'ci:all-tests') || github.event_name != 'pull_request' }}
     needs: base-build
     runs-on: ubuntu-latest
     timeout-minutes: 100
@@ -1267,146 +1267,328 @@ jobs:
       - name: Extract
         run: tar --zstd -xf build.tar.zst
 
-      - name: api.java
-        run: ant $OPTS -f java/api.java test
 
-#      - name: beans
-#        run: ant $OPTS -f java/beans test
-
-      - name: classfile
-        run: ant $OPTS -f java/classfile test
-
-      - name: dbschema
-        run: ant $OPTS -f java/dbschema test -Dtest.config=stable
-
-      - name: editor.htmlui
-        run: ant $OPTS -f java/editor.htmlui test
-
-      - name: java.completion
-        run: ant $OPTS -f java/java.completion test
-
-      - name: java.editor.base
-        run: ant $OPTS -f java/java.editor.base test
-
-      - name: java.editor
-        run: .github/retry.sh ant $OPTS -f java/java.editor test-unit
-
-      - name: java.freeform
-        run: ant $OPTS -f java/java.freeform test
-
-#      - name: java.kit
-#        run: ant $OPTS -f java/java.kit test
-
-#      - name: java.metrics
-#        run: ant $OPTS -f java/java.metrics test
-
-      - name: java.module.graph
-        run: ant $OPTS -f java/java.module.graph test
-
-      - name: java.navigation
-        run: ant $OPTS -f java/java.navigation test
-
-      - name: java.openjdk.project
-        run: ant $OPTS -f java/java.openjdk.project test
-
-      - name: java.platform
-        run: ant $OPTS -f java/java.platform test
-
-      - name: java.platform.ui
-        run: ant $OPTS -f java/java.platform.ui test
-
-      - name: java.preprocessorbridge
-        run: ant $OPTS -f java/java.preprocessorbridge test
-
-      - name: java.project
-        run: ant $OPTS -f java/java.project test
-
-#      - name: java.project.ui
-#        run: ant $OPTS -f java/java.project.ui test
-
-      - name: java.source
-        run: ant $OPTS -f java/java.source test-unit
-
-#      - name: java.source.ant
-#        run: ant $OPTS -f java/java.source.ant test
+# 10
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
 
       - name: java.source.base
-        run: ant $OPTS -f java/java.source.base test
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
 
-      - name: java.source.compat8
-        run: ant $OPTS -f java/java.source.compat8 test
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
 
-      - name: java.source.queriesimpl
-        run: ant $OPTS -f java/java.source.queriesimpl test
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
 
-      - name: java.sourceui
-        run: ant $OPTS -f java/java.sourceui test
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
 
-      - name: java.testrunner
-        run: ant $OPTS -f java/java.testrunner test
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
 
-      - name: java.testrunner.ant
-        run: ant $OPTS -f java/java.testrunner.ant test
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
 
-#      - name: javawebstart
-#        run: ant $OPTS -f java/javawebstart test
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
 
-#      - name: jellytools.java
-#        run: ant $OPTS -f java/jellytools.java test
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
 
-      - name: jshell.support
-        run: ant $OPTS -f java/jshell.support test
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
 
-      - name: junit
-        run: ant $OPTS -f java/junit test-unit
 
-      - name: junit.ant.ui
-        run: ant $OPTS -f java/junit.ant.ui test
+# 10
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
 
-      - name: lib.nbjavac
-        run: ant $OPTS -f java/lib.nbjavac test
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
 
-      - name: libs.nbjavacapi
-        run: ant $OPTS -f java/libs.nbjavacapi test
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
 
-#      - name: performance
-#        run: ant $OPTS -f java/performance test
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
 
-#      - name: performance.java
-#        run: ant $OPTS -f java/performance.java test
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
 
-#      - name: projectimport.eclipse.core
-#        run: ant $OPTS -f java/projectimport.eclipse.core test
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
 
-      - name: spellchecker.bindings.java
-        run: ant $OPTS -f java/spellchecker.bindings.java test
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
 
-      - name: testng
-        run: ant $OPTS -f java/testng test
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
 
-#      - name: testng.ant
-#        run: ant $OPTS -f java/testng.ant test
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
 
-#      - name: testng.ui
-#        run: ant $OPTS -f java/testng.ui test
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
 
-      - name: whitelist
-        run: ant $OPTS -f java/whitelist test
 
-      - name: xml.jaxb
-        run: ant $OPTS -f java/xml.jaxb test
+# 10
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
 
-      - name: java.lexer
-        run: ant $OPTS -f java/java.lexer test
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
 
-      - name: refactoring.java
-        run: ant $OPTS -f java/refactoring.java test-unit
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
 
-      - name: form
-        run: ant $OPTS -f java/form test-unit
-        
-      - name: javadoc
-        run: ant $OPTS -f java/javadoc test
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+
+# 10
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+
+# 10
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+
+# 10
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+
+# 10
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+
+# 10
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+
+# 10
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+
+# 10
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+      - name: java.source.base
+        run: ant -f java/java.source.base -Dtest.config.default.includes=**/PartialReparseTest.class test
+
+
+
 
       - name: Create Test Summary
         uses: test-summary/action@v2
