@@ -29,7 +29,6 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
-import java.beans.Introspector;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.util.ArrayList;
@@ -50,7 +49,6 @@ import javax.swing.UIManager;
 import javax.swing.event.ListDataEvent;
 import javax.swing.event.ListDataListener;
 import javax.swing.text.DefaultEditorKit;
-import org.netbeans.TopSecurityManager;
 import org.netbeans.core.ModuleActions;
 import org.netbeans.modules.progress.spi.Controller;
 import org.netbeans.modules.progress.spi.InternalHandle;
@@ -88,7 +86,7 @@ public class Install implements Runnable {
     private static final Logger LOG = Logger.getLogger(Install.class.getName());
     
     public @Override void run() {
-        TopSecurityManager.register(SecMan.DEFAULT);
+//        TopSecurityManager.register(SecMan.DEFAULT);
     }
     
     @OnStop
@@ -97,7 +95,7 @@ public class Install implements Runnable {
         public @Override void run() {
             showPendingTasks();
 
-            TopSecurityManager.unregister(SecMan.DEFAULT);
+//            TopSecurityManager.unregister(SecMan.DEFAULT);
         }
     }
 

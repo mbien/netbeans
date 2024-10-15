@@ -59,6 +59,7 @@ import java.util.concurrent.Future;
 import java.util.jar.Manifest;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 import org.openide.modules.Dependency;
 import org.openide.modules.ModuleInfo;
 import org.openide.modules.Modules;
@@ -744,7 +745,8 @@ public final class ModuleManager extends Modules {
             ProxyClassLoader priviledged = null;
             NetigsoLoader osgi = null;
             if (!name.startsWith("java.")) { // NOI18N
-                Class<?>[] stack = TopSecurityManager.getStack();
+                
+                List<Class<?>> stack = Util.getStack();
                 for (Class<?> c: stack) {
                     ClassLoader l = c.getClassLoader();
                     if (l == this) {
