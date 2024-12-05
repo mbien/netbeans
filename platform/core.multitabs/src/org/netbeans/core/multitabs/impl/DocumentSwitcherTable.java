@@ -80,7 +80,7 @@ class DocumentSwitcherTable extends SwitcherTable {
             projectColorTabDecorator = null;
         }
         if( Settings.getDefault().isShowFolderName() ) {
-            folderNameDecorator = new FolderNameTabDecorator();
+            folderNameDecorator = new FolderNameTabDecorator(this);
         } else {
             folderNameDecorator = null;
         }

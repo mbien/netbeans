@@ -21,15 +21,19 @@ package org.netbeans.core.multitabs.impl;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Rectangle;
+import java.io.File;
 import javax.swing.Icon;
 import javax.swing.UIManager;
 import org.netbeans.core.multitabs.TabDecorator;
 import org.netbeans.core.multitabs.prefs.SettingsImpl;
+import org.netbeans.swing.popupswitcher.SwitcherTable;
 import org.netbeans.swing.tabcontrol.TabData;
 import org.openide.filesystems.FileObject;
 import org.openide.loaders.DataObject;
 import org.openide.util.lookup.ServiceProvider;
 import org.openide.windows.TopComponent;
+
+import static java.util.Objects.requireNonNullElse;
 
 /**
  * Show the name of parent folder in tab's title.
@@ -41,9 +45,24 @@ import org.openide.windows.TopComponent;
 public class FolderNameTabDecorator extends TabDecorator {
 
     private final SettingsImpl settings = new SettingsImpl();
-    private static final String pathSeparator = System.getProperty( "file.separator", "/" ); //NOI18N
-    private static final String FONT_COLOR = "<font color=\"" + hiddenColor() + "\">"; //NOI18N
-    private static final String FONT_COLOR_END = "</font>"; //NOI18N
+    private final String fadeColor;
+
+    /**
+     * Decorator used for tabs
+     */
+    public FolderNameTabDecorator() {
+        fadeColor = fadeColor(
+            requireNonNullElse(UIManager.getColor("nb.multitabs.foreground"), UIManager.getColor("TabbedPane.foreground")), //NOI18N
+            requireNonNullElse(UIManager.getColor("nb.multitabs.background"), UIManager.getColor("TabbedPane.background")) //NOI18N
+        );
+    }
+
+    /**
+     * Decorator used for switcher
+     */
+    FolderNameTabDecorator(SwitcherTable switcher) {
+        fadeColor = fadeColor(switcher.getForeground(), switcher.getBackground());
+    }
 
     @Override
     public String getText( TabData tab ) {
@@ -57,7 +76,7 @@ public class FolderNameTabDecorator extends TabDecorator {
                 if( fo.isData() ) {
                     FileObject folder = fo.getParent();
                     if( null != folder ) {
-                        String folderName = FONT_COLOR + folder.getNameExt() + pathSeparator + FONT_COLOR_END;
+                        String folderName = "<font color=\"" + fadeColor + "\">" + folder.getNameExt() + File.separator + "</font>"; //NOI18N
                         String defaultText = tab.getText();
 
                         return merge( folderName, defaultText );
@@ -104,17 +123,8 @@ public class FolderNameTabDecorator extends TabDecorator {
         return res.toString();
     }
 
-    private static String hiddenColor() {
-        float a = 0.6f;
-
-        Color b = UIManager.getColor("nb.multitabs.background"); //NOI18N
-        Color f = UIManager.getColor("nb.multitabs.foreground"); //NOI18N
-
-        if (b == null || f == null) {
-            f = UIManager.getColor("TabbedPane.foreground"); //NOI18N
-            b = UIManager.getColor("TabbedPane.background"); //NOI18N
-        }
-
+    private String fadeColor(Color f, Color b) {
+        float a = 0.7f;
         return String.format("#%02x%02x%02x", //NOI18N
                  (int)(b.getRed()   + a * (f.getRed()   - b.getRed())),
                  (int)(b.getGreen() + a * (f.getGreen() - b.getGreen())),
