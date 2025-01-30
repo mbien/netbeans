@@ -104,7 +104,7 @@ public class InnerToOuterTransformer extends RefactoringVisitor {
                 TreePath elementPath = workingCopy.getTrees().getPath(current);
                 JavaFileObject sourceFile = elementPath != null ? elementPath.getCompilationUnit().getSourceFile() : null;
                 if (   (parent != null && parent.getKind() == Tree.Kind.CASE && ((CaseTree) parent).getExpression() == node && current.getKind() == ElementKind.ENUM_CONSTANT)
-                        || path.getCompilationUnit().getSourceFile() == sourceFile) {
+                    || path.getCompilationUnit().getSourceFile() == sourceFile) {
                     rewrite(node, make.Identifier(current.getSimpleName()));
                 } else {
                     rewrite(node, make.QualIdent(current));
@@ -291,47 +291,47 @@ public class InnerToOuterTransformer extends RefactoringVisitor {
             }
 
         } else if (refactoring.getReferenceName() != null && currentElement!=null && workingCopy.getTypes().isSubtype(currentElement.asType(), inner.asType()) && currentElement!=inner) {
-            VariableTree variable = make.Variable(make.Modifiers(Collections.<Modifier>emptySet()), refactoring.getReferenceName(), make.Type(outer.asType()), null);
+                VariableTree variable = make.Variable(make.Modifiers(Collections.<Modifier>emptySet()), refactoring.getReferenceName(), make.Type(outer.asType()), null);
                 for (Tree member:classTree.getMembers()) {
-                if (member.getKind() == Tree.Kind.METHOD) {
-                    MethodTree m = (MethodTree) member;
+                    if (member.getKind() == Tree.Kind.METHOD) {
+                        MethodTree m = (MethodTree) member;
                         if (m.getReturnType()==null) {
 
                             for( VariableTree var: m.getParameters() ) {
                                 if( var.getName().contentEquals(refactoring.getReferenceName()) ) {
-                                problem = MoveTransformer.createProblem(problem, true, NbBundle.getMessage(InnerToOuterTransformer.class, "ERR_InnerToOuter_OuterNameClashSubtype", refactoring.getReferenceName(), refactoring.getClassName(), currentElement.getSimpleName()));
+                                    problem = MoveTransformer.createProblem(problem, true, NbBundle.getMessage(InnerToOuterTransformer.class, "ERR_InnerToOuter_OuterNameClashSubtype", refactoring.getReferenceName(), refactoring.getClassName(), currentElement.getSimpleName()));
+                                }
                             }
-                        }
 
-                        MethodInvocationTree superCall = (MethodInvocationTree) ((ExpressionStatementTree) m.getBody().getStatements().get(0)).getExpression();
-                        List<ExpressionTree> newArgs = new ArrayList<ExpressionTree>(superCall.getArguments());
+                            MethodInvocationTree superCall = (MethodInvocationTree) ((ExpressionStatementTree) m.getBody().getStatements().get(0)).getExpression();
+                            List<ExpressionTree> newArgs = new ArrayList<ExpressionTree>(superCall.getArguments());
 
-                        MethodTree newConstructor = null;
-                        ExpressionTree exprTree = (ExpressionTree) make.Identifier(variable.getName().toString());
-                        if (hasVarArgs(m)) {
-                            int index = m.getParameters().size() - 1;
-                            newArgs.add(index, exprTree);
-                            newConstructor = make.insertMethodParameter(m, index, variable);
-                        } else {
-                            newArgs.add(exprTree);
-                            newConstructor = make.addMethodParameter(m, variable);
-                        }
-                        MethodInvocationTree method = make.MethodInvocation(
-                                Collections.<ExpressionTree>emptyList(),
-                                make.Identifier("super"), // NOI18N
-                                newArgs);
+                            MethodTree newConstructor = null;
+                            ExpressionTree exprTree = (ExpressionTree)make.Identifier(variable.getName().toString());
+                            if (hasVarArgs(m)) {
+                                int index = m.getParameters().size() - 1;
+                                newArgs.add(index, exprTree);
+                                newConstructor = make.insertMethodParameter(m, index, variable);
+                            } else {
+                                newArgs.add(exprTree);
+                                newConstructor = make.addMethodParameter(m, variable);
+                            }
+                            MethodInvocationTree method = make.MethodInvocation(
+                                    Collections.<ExpressionTree>emptyList(),
+                                    make.Identifier("super"), // NOI18N
+                                    newArgs);
 
-                        BlockTree block = make.insertBlockStatement(m.getBody(), 0, make.ExpressionStatement(method));
-                        block = make.removeBlockStatement(block, 1);
+                            BlockTree block = make.insertBlockStatement(m.getBody(), 0, make.ExpressionStatement(method));
+                            block = make.removeBlockStatement(block, 1);
 
-                        newConstructor = make.Constructor(
-                                make.Modifiers(newConstructor.getModifiers().getFlags(), newConstructor.getModifiers().getAnnotations()),
-                                newConstructor.getTypeParameters(),
-                                newConstructor.getParameters(),
-                                newConstructor.getThrows(),
-                                block);
+                            newConstructor = make.Constructor(
+                                    make.Modifiers(newConstructor.getModifiers().getFlags(), newConstructor.getModifiers().getAnnotations()),
+                                    newConstructor.getTypeParameters(),
+                                    newConstructor.getParameters(),
+                                    newConstructor.getThrows(),
+                                    block);
 
-                        rewrite(m, newConstructor);
+                            rewrite(m, newConstructor);
                     }
                 }
             }
