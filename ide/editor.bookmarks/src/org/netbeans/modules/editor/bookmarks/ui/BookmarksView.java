@@ -44,6 +44,7 @@ import javax.swing.JEditorPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
+import javax.swing.JTable;
 import javax.swing.JToggleButton;
 import javax.swing.JToolBar;
 import javax.swing.KeyStroke;
@@ -98,6 +99,8 @@ implements BookmarkManagerListener, PropertyChangeListener, ExplorerManager.Prov
 
     private static final int PREVIEW_PANE_REFRESH_DELAY = 300;
 
+    private boolean initDone = false;
+
     /**
      * Invoked from layer.
      * @return bookmarks view instance.
@@ -133,9 +136,11 @@ implements BookmarkManagerListener, PropertyChangeListener, ExplorerManager.Prov
     private transient JPanel previewPanel;
 
     private transient boolean dividerLocationSet;
+    private transient boolean dividerLocationUpdating;
 
     private transient JToggleButton bookmarksTreeButton;
     private transient JToggleButton bookmarksTableButton;
+    private transient JToggleButton showPreviewButton;
 
     private transient Timer previewRefreshTimer;
     private transient BookmarkInfo displayedBookmarkInfo;
@@ -145,6 +150,8 @@ implements BookmarkManagerListener, PropertyChangeListener, ExplorerManager.Prov
     private static final String PREFS_NODE = "BookmarksProperties"; //NOI18N
     private static final Preferences prefs = NbPreferences.forModule(BookmarksView.class).node(PREFS_NODE);
     private static final String TREE_VIEW_VISIBLE_PREF = "treeViewVisible"; //NOI18N
+    private static final String PREVIEW_VISIBLE_PREF = "previewVisible"; //NOI18N
+    private static final String DIVIDER_LOCATION_PREF = "dividerLocation"; //NOI18N
 
     @SuppressWarnings("LeakingThisInConstructor")
     BookmarksView() {
@@ -216,11 +223,15 @@ implements BookmarkManagerListener, PropertyChangeListener, ExplorerManager.Prov
 
             splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
             splitPane.setContinuousLayout(true);
+            splitPane.addPropertyChangeListener(JSplitPane.DIVIDER_LOCATION_PROPERTY, pce -> {
+                if(splitPane.getLeftComponent() != null && splitPane.getRightComponent() != null && ! dividerLocationUpdating) {
+                    prefs.putInt(DIVIDER_LOCATION_PREF, splitPane.getDividerLocation());
+                }
+            });
 
             previewPanel = new JPanel();
             previewPanel.setLayout(new GridLayout(1, 1));
             fixScrollPaneinSplitPaneJDKIssue(previewPanel);
-            splitPane.setRightComponent(previewPanel);
 
             gridBagConstraints = new GridBagConstraints();
             gridBagConstraints.gridx = 1;
@@ -234,12 +245,7 @@ implements BookmarkManagerListener, PropertyChangeListener, ExplorerManager.Prov
             add(splitPane, gridBagConstraints);
 
             // Make treeView visible
-            if (! prefs.getBoolean(TREE_VIEW_VISIBLE_PREF, true)) {
-                treeViewShowing = true;
-                setTreeViewVisible(false);
-            } else {
-                setTreeViewVisible(true);
-            }
+            setTreeViewVisible(prefs.getBoolean(TREE_VIEW_VISIBLE_PREF, true));
 
             BookmarkManager lockedBookmarkManager = BookmarkManager.getLocked();
             try {
@@ -248,6 +254,8 @@ implements BookmarkManagerListener, PropertyChangeListener, ExplorerManager.Prov
             } finally {
                 lockedBookmarkManager.unlock();
             }
+
+            updateSplitPane();
         }
     }
 
@@ -257,12 +265,19 @@ implements BookmarkManagerListener, PropertyChangeListener, ExplorerManager.Prov
     }
 
     private void setTreeViewVisible(boolean treeViewVisible) {
+        prefs.putBoolean(TREE_VIEW_VISIBLE_PREF, treeViewVisible);
         if (treeViewVisible != this.treeViewShowing) {
             this.treeViewShowing = treeViewVisible;
-            prefs.putBoolean(TREE_VIEW_VISIBLE_PREF, treeViewVisible);
-            TreeOrTableContainer container;
-            boolean create;
-            if (treeViewVisible) {
+            updateSplitPane();
+        }
+    }
+
+    private void updateSplitPane() {
+        TreeOrTableContainer container;
+        boolean create;
+        dividerLocationUpdating = true;
+        try {
+            if (treeViewShowing) {
                 create = (treeView == null);
                 if (create) {
                     container = new TreeOrTableContainer();
@@ -289,16 +304,25 @@ implements BookmarkManagerListener, PropertyChangeListener, ExplorerManager.Prov
                     container = (TreeOrTableContainer) tableView.getParent();
                 }
             }
-            int dividerLocation = splitPane.getDividerLocation();
             splitPane.setLeftComponent(container);
-            splitPane.setDividerLocation(dividerLocation);
-            if (!treeViewVisible && create) {
-                splitPane.validate(); // Have to validate to properly update column sizes
+            if (!treeViewShowing && create) {
+                // Ensure layout is done and we get sane widths when setting up
+                // columns
+                splitPane.getParent().doLayout();
+                splitPane.validate();
                 updateTableColumnSizes();
             }
-            bookmarksTreeButton.setSelected(treeViewVisible);
-            bookmarksTableButton.setSelected(!treeViewVisible);
+            if (showPreviewButton.isSelected()) {
+                splitPane.setRightComponent(previewPanel);
+                splitPane.setDividerLocation(prefs.getInt(DIVIDER_LOCATION_PREF, 400));
+            } else {
+                splitPane.setRightComponent(null);
+            }
+            bookmarksTreeButton.setSelected(treeViewShowing);
+            bookmarksTableButton.setSelected(!treeViewShowing);
             requestFocusTreeOrTable();
+        } finally {
+            dividerLocationUpdating = false;
         }
     }
 
@@ -436,25 +460,6 @@ implements BookmarkManagerListener, PropertyChangeListener, ExplorerManager.Prov
     protected void componentDeactivated() {
         ExplorerUtils.activateActions(explorerManager, false);
         super.componentDeactivated();
-    }
-
-    @Override
-    protected void componentShowing() {
-        // Ensure all bookmarks from all projects loaded
-        BookmarkManager lockedBookmarkManager = BookmarkManager.getLocked();
-        try {
-            lockedBookmarkManager.keepOpenProjectsBookmarksLoaded();
-        } finally {
-            lockedBookmarkManager.unlock();
-        }
-        initLayoutAndComponents();
-        doInitialSelection();
-        super.componentShowing();
-    }
-
-    @Override
-    protected void componentHidden() {
-        super.componentHidden();
     }
 
     private void schedulePaneRefresh() {
@@ -595,6 +600,21 @@ implements BookmarkManagerListener, PropertyChangeListener, ExplorerManager.Prov
 
     @Override
     public void paint(Graphics g) {
+        // Ugly hack - componentShowing and addNotify fire to soon, before the
+        // component as a width set. Event running doLayout on the parent does
+        // not help, so wait until we are ready to paint (...)
+        if (!initDone) {
+            // Ensure all bookmarks from all projects loaded
+            BookmarkManager lockedBookmarkManager = BookmarkManager.getLocked();
+            try {
+                lockedBookmarkManager.keepOpenProjectsBookmarksLoaded();
+            } finally {
+                lockedBookmarkManager.unlock();
+            }
+            initLayoutAndComponents();
+            doInitialSelection();
+            initDone = true;
+        }
         super.paint(g);
         if (!dividerLocationSet && splitPane != null && treeView != null) {
             dividerLocationSet = true;
@@ -645,6 +665,16 @@ implements BookmarkManagerListener, PropertyChangeListener, ExplorerManager.Prov
         });
         toolBar.add(bookmarksTableButton);
         toolBar.addSeparator();
+
+    	showPreviewButton = new JToggleButton(
+                ImageUtilities.loadImageIcon("org/netbeans/modules/editor/bookmarks/resources/preview.png", false));
+        showPreviewButton.setToolTipText(NbBundle.getMessage(BookmarksView.class, "LBL_toolBarShowPreviewButtonToolTip"));
+        showPreviewButton.setSelected(prefs.getBoolean(PREVIEW_VISIBLE_PREF, true));
+        showPreviewButton.addActionListener((ActionEvent e) -> {
+            prefs.putBoolean(PREVIEW_VISIBLE_PREF, showPreviewButton.isSelected());
+            updateSplitPane();
+        });
+        toolBar.add(showPreviewButton);
 
         return toolBar;
     }
