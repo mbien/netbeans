@@ -210,17 +210,14 @@ public class RefactoringPanel extends JPanel implements FiltersManagerImpl.Filte
         if ("Aqua".equals(UIManager.getLookAndFeel().getID())) { //NOI18N
             southPanel.setBackground(UIManager.getColor("NbExplorerView.background"));
         }
-        // put the toolbar to the panel. If the getToolBar() returns null,
-        // suppose the toolbar does not exist.
+
         JToolBar toolbar = getToolBar();
-        if (toolbar != null) {
-            if ("Aqua".equals(UIManager.getLookAndFeel().getID())) { //NOI18N
-                toolbar.setBackground(UIManager.getColor("NbExplorerView.background"));
-            }
-            toolbars = new JPanel(new BorderLayout());
-            toolbars.add(toolbar, BorderLayout.WEST);
-            left.add(toolbars, BorderLayout.WEST);
+        if ("Aqua".equals(UIManager.getLookAndFeel().getID())) { //NOI18N
+            toolbar.setBackground(UIManager.getColor("NbExplorerView.background"));
         }
+        toolbars = new JPanel(new BorderLayout());
+        toolbars.add(toolbar, BorderLayout.WEST);
+        left.add(toolbars, BorderLayout.WEST);
         validate();
         inited=true;
     }
@@ -248,8 +245,6 @@ public class RefactoringPanel extends JPanel implements FiltersManagerImpl.Filte
      * Returns the toolbar. In this default implementation, toolbar is
      * oriented vertically in the west and contains 'expand tree' toggle
      * button and refresh button.
-     * Override this method and return null if you do not want toolbar
-     * in your panel.
      *
      * @return  toolBar with actions for refactoring panel
      */
@@ -309,18 +304,13 @@ public class RefactoringPanel extends JPanel implements FiltersManagerImpl.Filte
 
         if (!Utilities.isMac()) {
             refreshButton.setMnemonic(
-                    NbBundle.getMessage(RefactoringPanel.class, "MNEM_refresh").charAt(0));
-
+                    NbBundle.getMessage(RefactoringPanel.class, "MNEM_refresh").charAt(0)); // NOI18N
             expandButton.setMnemonic(
-                    NbBundle.getMessage(RefactoringPanel.class, "MNEM_expandAll").charAt(0) // NOI18N
-                    );
-
+                    NbBundle.getMessage(RefactoringPanel.class, "MNEM_expandAll").charAt(0)); // NOI18N
             logicalViewButton.setMnemonic(
-                    NbBundle.getMessage(RefactoringPanel.class, "MNEM_logicalView").charAt(0) // NOI18N
-                    );
+                    NbBundle.getMessage(RefactoringPanel.class, "MNEM_logicalView").charAt(0)); // NOI18N
             physicalViewButton.setMnemonic(
-                    NbBundle.getMessage(RefactoringPanel.class, "MNEM_physicalView").charAt(0) // NOI18N
-                    );
+                    NbBundle.getMessage(RefactoringPanel.class, "MNEM_physicalView").charAt(0)); // NOI18N
         }
 
         if (refactoringUI instanceof RefactoringCustomUI refactoringCustomUI) {
@@ -380,8 +370,7 @@ public class RefactoringPanel extends JPanel implements FiltersManagerImpl.Filte
         );
         previewButton.setBorderPainted(false);
         previewButton.addActionListener(getButtonListener());
-        previewButton.setSelected(getPreferences().getBoolean(preferencesKeyForUI(PREF_KEY_SHOW_PREVIEW), true)
-        );
+        previewButton.setSelected(getPreferences().getBoolean(preferencesKeyForUI(PREF_KEY_SHOW_PREVIEW), true));
 
         // create toolbar
         JToolBar toolbar = new ToolbarWithOverflow(JToolBar.VERTICAL);
@@ -570,8 +559,8 @@ public class RefactoringPanel extends JPanel implements FiltersManagerImpl.Filte
                     JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION) {
                 refresh(true);
                 return;
-            }   else {
-            return;
+            } else {
+                return;
             }
         }
         disableComponents();
@@ -699,7 +688,7 @@ public class RefactoringPanel extends JPanel implements FiltersManagerImpl.Filte
                                         DialogDescriptor.DEFAULT_ALIGN,
                                         refactoringUI.getHelpCtx(),
                                         null);
-                                DialogDisplayer.getDefault().notifyLater(nd);
+                DialogDisplayer.getDefault().notifyLater(nd);
                 return;
             }
 
