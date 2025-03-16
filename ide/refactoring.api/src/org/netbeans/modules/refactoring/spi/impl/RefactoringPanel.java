@@ -177,7 +177,8 @@ public class RefactoringPanel extends JPanel implements FiltersManagerImpl.Filte
         left.setLayout(new BorderLayout());
         setLayout(new BorderLayout());
         add(splitPane, BorderLayout.CENTER);
-        splitPane.setRightComponent(new JLabel(org.openide.util.NbBundle.getMessage(RefactoringPanel.class, "LBL_Preview_not_Available"), SwingConstants.CENTER));
+        right = new JLabel(org.openide.util.NbBundle.getMessage(RefactoringPanel.class, "LBL_Preview_not_Available"), SwingConstants.CENTER);
+        splitPane.setRightComponent(right);
         splitPane.setBorder(null);
         splitPane.addPropertyChangeListener(JSplitPane.DIVIDER_LOCATION_PROPERTY, evt -> {
             if (previewButton.isSelected() && splitPane.getRightComponent() != null) {
@@ -218,6 +219,7 @@ public class RefactoringPanel extends JPanel implements FiltersManagerImpl.Filte
         toolbars = new JPanel(new BorderLayout());
         toolbars.add(toolbar, BorderLayout.WEST);
         left.add(toolbars, BorderLayout.WEST);
+        updatePreviewVisibility();
         validate();
         inited=true;
     }
@@ -395,7 +397,7 @@ public class RefactoringPanel extends JPanel implements FiltersManagerImpl.Filte
     }
 
     private String preferencesKeyForUI(String uiPreference) {
-        Class targetClass = refactoringUI.getClass();
+        Class<?> targetClass = refactoringUI.getClass();
         return targetClass.getName() + "." + uiPreference;
     }
 
@@ -488,11 +490,15 @@ public class RefactoringPanel extends JPanel implements FiltersManagerImpl.Filte
 
     private void updatePreviewVisibility() {
         getPreferences().putBoolean(preferencesKeyForUI(PREF_KEY_SHOW_PREVIEW), previewButton.isSelected());
-        if(previewButton.isSelected()) {
+        if (previewButton.isSelected()) {
             boolean initDivider = splitPane.getRightComponent() == null;
-            splitPane.setRightComponent(right);
-            if(initDivider) {
+            if (initDivider) {
+                splitPane.setRightComponent(right);
                 initDivider();
+            } else {
+                int oldLocation = splitPane.getDividerLocation();
+                splitPane.setRightComponent(right);
+                splitPane.setDividerLocation(oldLocation);
             }
         } else {
             splitPane.setRightComponent(null);
@@ -903,7 +909,7 @@ public class RefactoringPanel extends JPanel implements FiltersManagerImpl.Filte
             tree.setSelectionRow(0);
             setRefactoringEnabled(true, true);
             if (parametersPanel != null && (Boolean) parametersPanel.getClientProperty(ParametersPanel.JUMP_TO_FIRST_OCCURENCE)) {
-                selectNextUsage();
+                selectNextUsage(false);
             }
         });
     }
@@ -921,14 +927,14 @@ public class RefactoringPanel extends JPanel implements FiltersManagerImpl.Filte
         if (showParametersPanel) {
             if (size < MAX_ROWS) {
                 expandAll();
-                selectNextUsage();
+                selectNextUsage(false);
             } else {
                 expandButton.setSelected(false);
             }
         } else {
             if (expandButton.isSelected()) {
                 expandAll();
-                selectNextUsage();
+                selectNextUsage(false);
             } else {
                 expandButton.setSelected(false);
             }
@@ -1073,29 +1079,36 @@ public class RefactoringPanel extends JPanel implements FiltersManagerImpl.Filte
         disableComponent(tree);
     }
 
-    void selectNextUsage() {
-        CheckNodeListener.selectNextPrev(true, previewButton.isSelected(), tree);
+    /**
+     * @param enableSourceJump if true and preview is disabled, the
+     * next/previous actions shall jump to the corresponding code location,
+     * this should not happen when the initial tree is opened.
+     */
+    void selectNextUsage(boolean enableSourceJump) {
+        CheckNodeListener.selectNextPrev(true, enableSourceJump && !previewButton.isSelected(), tree);
     }
 
-    void selectPrevUsage() {
-        CheckNodeListener.selectNextPrev(false, previewButton.isSelected(), tree);
+    /**
+     * @param enableSourceJump if true and preview is disabled, the
+     * next/previous actions shall jump to the corresponding code location,
+     * this should not happen when the initial tree is opened.
+     */
+    void selectPrevUsage(boolean enableSourceJump) {
+        CheckNodeListener.selectNextPrev(false, enableSourceJump && !previewButton.isSelected(), tree);
     }
 
-    private int location;
     public boolean setPreviewComponent(Component component) {
-        if (splitPane.getRightComponent() != null && previewButton.isSelected()) {
-            location = splitPane.getDividerLocation();
-        }
         if (component == null) {
             if (right == null) {
                 return false;
             }
         }
-        right = component;
-        updatePreviewVisibility();
-        if (splitPane.getRightComponent()!=null && previewButton.isSelected()) {
-            splitPane.setDividerLocation(location);
+        if (component == null) {
+            right = new JLabel(org.openide.util.NbBundle.getMessage(RefactoringPanel.class, "LBL_Preview_not_Available"), SwingConstants.CENTER);
+        } else {
+            right = component;
         }
+        updatePreviewVisibility();
         return true;
     }
 
@@ -1201,9 +1214,9 @@ public class RefactoringPanel extends JPanel implements FiltersManagerImpl.Filte
             } else if (o == customViewButton) {
                 switchToCustomView();
             } else if (o == nextMatch) {
-                selectNextUsage();
+                selectNextUsage(true);
             } else if (o == prevMatch) {
-                selectPrevUsage();
+                selectPrevUsage(true);
             } else if (o == stopButton) {
                 stopSearch();
             } else if (o == previewButton) {

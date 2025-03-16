@@ -306,7 +306,7 @@ class CheckNodeListener implements MouseListener, KeyListener {
         }
     }
 
-    static void selectNextPrev(final boolean next, boolean switchDiff, JTree tree) {
+    static void selectNextPrev(final boolean next, boolean jumpSource, JTree tree) {
         int[] rows = tree.getSelectionRows();
         int newRow = rows == null || rows.length == 0 ? 0 : rows[0];
         int maxcount = tree.getRowCount();
@@ -332,9 +332,8 @@ class CheckNodeListener implements MouseListener, KeyListener {
         } while (!node.isLeaf());
         tree.setSelectionRow(newRow);
         verticalScrollRowToVisible(tree, newRow);
-        if (switchDiff) {
-            CheckNodeListener.openDiff(node);
-        } else {
+        CheckNodeListener.openDiff(node);
+        if (jumpSource) {
             CheckNodeListener.findInSource(node);
         }
     }
