@@ -22,7 +22,6 @@ import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.FontMetrics;
-import java.awt.Graphics;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
@@ -44,15 +43,12 @@ import javax.swing.JEditorPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
-import javax.swing.JTable;
 import javax.swing.JToggleButton;
 import javax.swing.JToolBar;
 import javax.swing.KeyStroke;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
-import javax.swing.Timer;
 import javax.swing.UIManager;
-import javax.swing.event.ListSelectionEvent;
 import javax.swing.table.TableColumn;
 import javax.swing.table.TableColumnModel;
 import javax.swing.text.Document;
@@ -79,6 +75,9 @@ import org.openide.nodes.Node;
 import org.openide.util.Exceptions;
 import org.openide.util.HelpCtx;
 import org.openide.util.ImageUtilities;
+import org.openide.util.Lookup;
+import org.openide.util.LookupEvent;
+import org.openide.util.LookupListener;
 import org.openide.util.NbBundle;
 import org.openide.util.NbPreferences;
 import org.openide.util.RequestProcessor;
@@ -94,12 +93,7 @@ import org.openide.windows.WindowManager;
 public final class BookmarksView extends TopComponent
 implements BookmarkManagerListener, PropertyChangeListener, ExplorerManager.Provider
 {
-
     private static final String HELP_ID = "bookmarks_window_csh"; // NOI18N
-
-    private static final int PREVIEW_PANE_REFRESH_DELAY = 300;
-
-    private boolean initDone = false;
 
     /**
      * Invoked from layer.
@@ -135,17 +129,15 @@ implements BookmarkManagerListener, PropertyChangeListener, ExplorerManager.Prov
     private transient BeanTreeView treeView;
     private transient JPanel previewPanel;
 
-    private transient boolean dividerLocationSet;
     private transient boolean dividerLocationUpdating;
 
     private transient JToggleButton bookmarksTreeButton;
     private transient JToggleButton bookmarksTableButton;
     private transient JToggleButton showPreviewButton;
 
-    private transient Timer previewRefreshTimer;
     private transient BookmarkInfo displayedBookmarkInfo;
 
-    private transient boolean initialSelectionDone;
+    private transient boolean initialTreeSelectionDone;
 
     private static final String PREFS_NODE = "BookmarksProperties"; //NOI18N
     private static final Preferences prefs = NbPreferences.forModule(BookmarksView.class).node(PREFS_NODE);
@@ -262,6 +254,11 @@ implements BookmarkManagerListener, PropertyChangeListener, ExplorerManager.Prov
     @Override
     public void bookmarksChanged(final BookmarkManagerEvent evt) {
         updateTreeRootContext(evt);
+        if (!initialTreeSelectionDone) {
+            SwingUtilities.invokeLater(() -> {
+                doInitialSelection();
+            });
+        }
     }
 
     private void setTreeViewVisible(boolean treeViewVisible) {
@@ -388,8 +385,10 @@ implements BookmarkManagerListener, PropertyChangeListener, ExplorerManager.Prov
                 }
             }
         });
-        tableView.getTable().getSelectionModel().addListSelectionListener((ListSelectionEvent e) -> {
-            schedulePaneRefresh();
+        tableView.getTable().getSelectionModel().addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting() && !tableView.getTable().getSelectionModel().isSelectionEmpty()) {
+                checkShowPreview();
+            }
         });
     }
 
@@ -462,14 +461,18 @@ implements BookmarkManagerListener, PropertyChangeListener, ExplorerManager.Prov
         super.componentDeactivated();
     }
 
-    private void schedulePaneRefresh() {
-        if (previewRefreshTimer == null) {
-            previewRefreshTimer = new Timer(PREVIEW_PANE_REFRESH_DELAY, (ActionEvent e) -> {
-                checkShowPreview();
-            });
-            previewRefreshTimer.setRepeats(false);
+    @Override
+    protected void componentShowing() {
+        // Ensure all bookmarks from all projects loaded
+        BookmarkManager lockedBookmarkManager = BookmarkManager.getLocked();
+        try {
+            lockedBookmarkManager.keepOpenProjectsBookmarksLoaded();
+        } finally {
+            lockedBookmarkManager.unlock();
         }
-        previewRefreshTimer.restart();
+        initLayoutAndComponents();
+        doInitialSelection();
+        super.componentShowing();
     }
 
     void checkShowPreview() {
@@ -567,13 +570,13 @@ implements BookmarkManagerListener, PropertyChangeListener, ExplorerManager.Prov
         return null;
     }
 
-    @SuppressWarnings("NestedAssignment")
-    private void doInitialSelection() { // Perform initial selection
-        if (!initialSelectionDone) {
+    /// Perform initial tree expansion and selection
+    private void doInitialSelection() {
+        if (!initialTreeSelectionDone) {
             if (treeViewShowing) {
                 Node selectedNode = getTreeSelectedNode();
                 if (selectedNode instanceof BookmarkNode) {
-                    initialSelectionDone = true;
+                    initialTreeSelectionDone = true;
                 } else {
                     FileObject selectedFileObject = org.openide.util.Utilities.actionsGlobalContext().lookup(FileObject.class);
                     if (selectedFileObject != null) {
@@ -582,7 +585,7 @@ implements BookmarkManagerListener, PropertyChangeListener, ExplorerManager.Prov
                             ProjectBookmarks projectBookmarks = lockedBookmarkManager.getProjectBookmarks(selectedFileObject);
                             Node bNode = nodeTree.findFirstBookmarkNode(projectBookmarks, selectedFileObject);
                             if (bNode != null) {
-                                initialSelectionDone = true;
+                                initialTreeSelectionDone = true;
                                 try {
                                     explorerManager.setSelectedNodes(new Node[]{bNode});
                                 } catch (PropertyVetoException ex) {
@@ -592,35 +595,18 @@ implements BookmarkManagerListener, PropertyChangeListener, ExplorerManager.Prov
                         } finally {
                             lockedBookmarkManager.unlock();
                         }
+                    } else {
+                        Lookup.Result<FileObject> result = org.openide.util.Utilities.actionsGlobalContext().lookupResult(FileObject.class);
+                        LookupListener onFirstFocus = new LookupListener() {
+                            @Override public void resultChanged(LookupEvent ev) {
+                                result.removeLookupListener(this);
+                                doInitialSelection();
+                            }
+                        };
+                        result.addLookupListener(onFirstFocus);
                     }
                 }
             }
-        }
-    }
-
-    @Override
-    public void paint(Graphics g) {
-        // Ugly hack - componentShowing and addNotify fire to soon, before the
-        // component as a width set. Event running doLayout on the parent does
-        // not help, so wait until we are ready to paint (...)
-        if (!initDone) {
-            // Ensure all bookmarks from all projects loaded
-            BookmarkManager lockedBookmarkManager = BookmarkManager.getLocked();
-            try {
-                lockedBookmarkManager.keepOpenProjectsBookmarksLoaded();
-            } finally {
-                lockedBookmarkManager.unlock();
-            }
-            initLayoutAndComponents();
-            doInitialSelection();
-            initDone = true;
-        }
-        super.paint(g);
-        if (!dividerLocationSet && splitPane != null && treeView != null) {
-            dividerLocationSet = true;
-            // setDividerLocation() only works when layout is finished
-            splitPane.setDividerLocation(0.5d);
-            splitPane.setResizeWeight(0.5d); // Resize in the same proportions
         }
     }
 
@@ -686,7 +672,7 @@ implements BookmarkManagerListener, PropertyChangeListener, ExplorerManager.Prov
     @Override
     public void propertyChange(PropertyChangeEvent evt) {
         if ("selectedNodes".equals(evt.getPropertyName())) { //NOI18N
-            schedulePaneRefresh();
+            checkShowPreview();
         }
     }
 
