@@ -52,10 +52,18 @@ public class CheckLinks extends MatchingTask {
     private boolean checkexternal = true;
     private boolean checkspaces = true;
     private boolean checkforbidden = true;
-    private List<Mapper> mappers = new LinkedList<>();
-    private List<Filter> filters = new ArrayList<>();
+    private boolean failonerror = false;
+    private final List<Mapper> mappers = new LinkedList<>();
+    private final List<Filter> filters = new ArrayList<>();
     private File report;
     private File externallinksdump;
+    
+    /**
+     * Fail task if errors are found.
+     */
+    public void setFailonerror(boolean fail) {
+        failonerror = fail;
+    }
 
     /** Set whether to check external links (absolute URLs).
      * Local relative links are always checked.
@@ -111,6 +119,7 @@ public class CheckLinks extends MatchingTask {
         return m;
     }
 
+    @Override
     public void execute () throws BuildException {
         if (basedir == null) throw new BuildException ("Must specify the basedir attribute");
         FileScanner scanner = getDirectoryScanner (basedir);
@@ -123,8 +132,8 @@ public class CheckLinks extends MatchingTask {
         Set<URI> badurls = new HashSet<>(100);
         Set<URI> cleanurls = new HashSet<>(100);
         List<String> errors = new ArrayList<>();
-        for (int i = 0; i < files.length; i++) {
-            File file = new File (basedir, files[i]);
+        for (String str : files) {
+            File file = new File(basedir, str);
             URI fileurl = file.toURI();
             log ("Scanning " + file, Project.MSG_VERBOSE);
             try {
@@ -142,6 +151,11 @@ public class CheckLinks extends MatchingTask {
             testMessage = b.toString();
         }
         JUnitReportWriter.writeReport(this, null, report, Collections.singletonMap("testBrokenLinks", testMessage));
+        
+        if (failonerror && !errors.isEmpty()) {
+            throw new BuildException("errors were found");
+        }
+        
     }
     
     private static Pattern hrefOrAnchor = Pattern.compile("<(a|code|div|img|link|h1|h2|h3|h4|h5|li|section|span)(\\s+class=\"[\\w\\-]*\")?(\\s+shape=\"rect\")?(?:\\s+rel=\"stylesheet\")?\\s+(href|name|id|src)=\"([^\"#]*)(#[^\"$]+)?\"(\\s+shape=\"rect\")?(?:\\s+type=\"text/css\")?(\\s+class=\"[\\w\\-]*\")?\\s*/?>", Pattern.CASE_INSENSITIVE);
@@ -504,7 +518,7 @@ public class CheckLinks extends MatchingTask {
                         String location = findLocation(content, m.start(5));
                         String fixedUri;
                         if (uri.indexOf(' ') != -1) {
-                            fixedUri = uri.replaceAll(" ", "%20");
+                            fixedUri = uri.replace(" ", "%20");
                             if (checkspaces) {
                                 errors.add(normalize(basepath, mappers) + location + ": spaces in URIs should be encoded as \"%20\": " + uri);
                             }
@@ -516,10 +530,8 @@ public class CheckLinks extends MatchingTask {
                             if (!relUri.isOpaque()) {
                                 URI o = base.resolve(relUri).normalize();
                                 //task.log("href: " + o);
-                                if (!others.containsKey(o)) {
-                                    // Only keep location info for first reference.
-                                    others.put(o, location);
-                                }
+                                 // Only keep location info for first reference.
+                                others.putIfAbsent(o, location);
                             } // else mailto: or similar
                         } catch (URISyntaxException e) {
                             // Message should contain the URI.
@@ -551,8 +563,8 @@ public class CheckLinks extends MatchingTask {
             for (Mapper m : mappers) {
                 String[] nue = m.getImplementation().mapFileName(path);
                 if (nue != null) {
-                    for (int i = 0; i < nue.length; i++) {
-                        File f = new File(nue[i]);
+                    for (String str : nue) {
+                        File f = new File(str);
                         if (f.isFile()) {
                             return new File(f.toURI().normalize()).getAbsolutePath();
                         }
@@ -615,7 +627,7 @@ public class CheckLinks extends MatchingTask {
         return ":" + line + ":" + col;
     }
 
-    static final ThreadLocal<URLStreamHandlerFactory> handlerFactory = new ThreadLocal<URLStreamHandlerFactory>();
+    static final ThreadLocal<URLStreamHandlerFactory> handlerFactory = new ThreadLocal<>();
     static URL toURL(URI uri) throws MalformedURLException {
         URLStreamHandlerFactory f = handlerFactory.get();
         URLStreamHandler h = f != null && uri.getScheme() != null ? f.createURLStreamHandler(uri.getScheme()) : null;
@@ -627,7 +639,7 @@ public class CheckLinks extends MatchingTask {
         private Pattern pattern;
         
         public void setAccept (boolean a) {
-            accept = Boolean.valueOf (a);
+            accept = a;
         }
         
         public void setPattern (String s) {

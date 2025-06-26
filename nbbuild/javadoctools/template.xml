@@ -566,7 +566,7 @@ cause it to fail.
             </classpath>
         </taskdef>
         <checklinks basedir="${javadoc.out.dir}" checkexternal="${javadoc.check.external.links}"
-                    report="${javadoc.out.dir}/checklinks-errors-${javadoc.name}.xml" checkspaces="false">
+                    report="${javadoc.out.dir}/checklinks-errors-${javadoc.name}.xml" checkspaces="false" failonerror="true">
             <include name="overview-summary.html"/>
             <include name="apichanges.html"/>
             <include name="architecture-summary.html"/>
