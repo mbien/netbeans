@@ -237,6 +237,11 @@ public final class TreeUtilities {
                             }
                         }
                     }
+                } else if (parentLeaf.getKind() == Kind.LAMBDA_EXPRESSION && path.getLeaf().getKind() == Kind.MEMBER_SELECT) {
+                    JCLambda let = (JCLambda) parentLeaf;
+                    if (let.paramKind == JCLambda.ParameterKind.IMPLICIT) {
+                        return true;
+                    }
                 }
             }
             path = path.getParentPath();
