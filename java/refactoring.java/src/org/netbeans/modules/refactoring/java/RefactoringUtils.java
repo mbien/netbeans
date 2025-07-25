@@ -302,10 +302,10 @@ public class RefactoringUtils {
      * @deprecated 
      */
     @Deprecated
-    public static boolean isOnSourceClasspath(FileObject fo) {
+    public static boolean isOnSourceClasspath(FileObject fo, boolean permitSourceFile) {
         Project pr = FileOwnerQuery.getOwner(fo);
         if (pr == null) {
-            return SourceLauncher.isIndexedSourceLauncherFile(fo);
+            return permitSourceFile && SourceLauncher.isIndexedSourceLauncherFile(fo);
         }
 
         //workaround for 143542
@@ -340,8 +340,8 @@ public class RefactoringUtils {
      * @deprecated 
      */
     @Deprecated
-    public static boolean isRefactorable(FileObject file) {
-        return file != null && isJavaFile(file) && isFileInOpenProject(file) && isOnSourceClasspath(file);
+    public static boolean isRefactorable(FileObject file, boolean permitSourceFile) {
+        return file != null && isJavaFile(file) && isFileInOpenProject(file) && isOnSourceClasspath(file, permitSourceFile);
     }
 
     /**

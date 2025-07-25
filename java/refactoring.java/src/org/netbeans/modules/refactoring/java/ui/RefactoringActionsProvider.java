@@ -185,7 +185,7 @@ public class RefactoringActionsProvider extends ActionsImplementationProvider{
             if (!fo.isFolder()) {
                 return false;
             }
-            if (!JavaRefactoringUtils.isOnSourceClasspath(fo)) {
+            if (!RefactoringUtils.isOnSourceClasspath(fo, false)) {
                 return false;
             }
         }
@@ -331,7 +331,7 @@ public class RefactoringActionsProvider extends ActionsImplementationProvider{
             if (!fo.isFolder()) {
                 return false;
             }
-            if (!JavaRefactoringUtils.isOnSourceClasspath(fo)) {
+            if (!RefactoringUtils.isOnSourceClasspath(fo, false)) {
                 return false;
             }
             
@@ -343,7 +343,7 @@ public class RefactoringActionsProvider extends ActionsImplementationProvider{
                 if (dob==null) {
                     return false;
                 }
-                if (!JavaRefactoringUtils.isOnSourceClasspath(dob.getPrimaryFile())) {
+                if (!RefactoringUtils.isOnSourceClasspath(dob.getPrimaryFile(), false)) {
                     return false;
                 }
                 if (dob instanceof DataFolder) {
@@ -380,7 +380,7 @@ public class RefactoringActionsProvider extends ActionsImplementationProvider{
                         return false;
                     } else {
                         //Ctrl-X
-                        if (!JavaRefactoringUtils.isOnSourceClasspath(dob.getPrimaryFile()) || RefactoringUtils.isClasspathRoot(dob.getPrimaryFile())) {
+                        if (!RefactoringUtils.isOnSourceClasspath(dob.getPrimaryFile(), false) || RefactoringUtils.isClasspathRoot(dob.getPrimaryFile())) {
                             return false;
                         } else {
                             LinkedList<DataFolder> folders = new LinkedList<DataFolder>();
@@ -399,7 +399,7 @@ public class RefactoringActionsProvider extends ActionsImplementationProvider{
                         }
                     }
                 }
-                if (!JavaRefactoringUtils.isOnSourceClasspath(dob.getPrimaryFile())) {
+                if (!RefactoringUtils.isOnSourceClasspath(dob.getPrimaryFile(), false)) {
                     return false;
                 }
                 if (RefactoringUtils.isJavaFile(dob.getPrimaryFile())) {

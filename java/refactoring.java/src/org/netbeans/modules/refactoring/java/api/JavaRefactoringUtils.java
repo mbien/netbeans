@@ -92,7 +92,7 @@ public final class JavaRefactoringUtils {
      */
     @SuppressWarnings("deprecation")
     public static boolean isOnSourceClasspath(FileObject fo) {
-        return RefactoringUtils.isOnSourceClasspath(fo);
+        return RefactoringUtils.isOnSourceClasspath(fo, true);
     }
 
     /**
@@ -102,7 +102,7 @@ public final class JavaRefactoringUtils {
      */
     @SuppressWarnings("deprecation")
     public static boolean isRefactorable(FileObject file) {
-        return RefactoringUtils.isRefactorable(file) && file.canWrite() && file.canRead();
+        return RefactoringUtils.isRefactorable(file, true) && file.canWrite() && file.canRead();
     }
 
     /**
