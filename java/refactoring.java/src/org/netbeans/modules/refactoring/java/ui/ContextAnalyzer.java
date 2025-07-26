@@ -154,10 +154,6 @@ public final class ContextAnalyzer {
      * @return 
      */
     public static boolean canRefactorSingle(Lookup lookup, boolean notOnlyFile, boolean onlyFromEditor) {
-        return canRefactorSingle(lookup, notOnlyFile, onlyFromEditor, true);
-    }
-
-    public static boolean canRefactorSingle(Lookup lookup, boolean notOnlyFile, boolean onlyFromEditor, boolean permitSourceFile) {
         Collection<? extends Node> nodes = new HashSet<Node>(lookup.lookupAll(Node.class));
         if(nodes.size() != 1) {
             return false;
@@ -165,7 +161,7 @@ public final class ContextAnalyzer {
         Node node = nodes.iterator().next();
         TreePathHandle tph = node.getLookup().lookup(TreePathHandle.class);
         if (tph != null) {
-            if(RefactoringUtils.isRefactorable(tph.getFileObject(), permitSourceFile)) {
+            if(JavaRefactoringUtils.isRefactorable(tph.getFileObject())) {
                 return !onlyFromEditor || RefactoringUtils.isFromEditor(lookup.lookup(EditorCookie.class));
             } else {
                 return false;
@@ -176,7 +172,7 @@ public final class ContextAnalyzer {
             return false;
         }
         FileObject fileObj = dObj.getPrimaryFile();
-        if(null == fileObj || !RefactoringUtils.isRefactorable(fileObj, permitSourceFile)) {
+        if(null == fileObj || !JavaRefactoringUtils.isRefactorable(fileObj)) {
             return false;
         }
 
