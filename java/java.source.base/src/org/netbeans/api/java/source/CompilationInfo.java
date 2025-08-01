@@ -27,6 +27,7 @@ import com.sun.source.util.JavacTask;
 import com.sun.source.util.TreePath;
 import com.sun.source.util.Trees;
 import com.sun.tools.javac.api.JavacTrees;
+import com.sun.tools.javac.code.Preview;
 import com.sun.tools.javac.code.Source;
 import com.sun.tools.javac.model.JavacElements;
 import com.sun.tools.javac.tree.JCTree.JCCompilationUnit;
@@ -304,6 +305,11 @@ public class CompilationInfo {
         //use a working init order:
         com.sun.tools.javac.main.JavaCompiler.instance(impl.getJavacTask().getContext());
 	return impl.getJavacTask().getElements();
+    }
+
+    public @NonNull Preview getPreview() {
+        checkConfinement();
+        return Preview.instance(impl.getJavacTask().getContext());
     }
         
     /**

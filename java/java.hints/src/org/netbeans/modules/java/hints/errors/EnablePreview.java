@@ -19,12 +19,8 @@
 package org.netbeans.modules.java.hints.errors;
 
 import com.sun.source.util.TreePath;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import javax.lang.model.SourceVersion;
 import org.netbeans.api.annotations.common.NonNull;
 import org.netbeans.api.java.platform.JavaPlatform;
 import org.netbeans.api.java.platform.JavaPlatformManager;
@@ -50,10 +46,16 @@ import org.openide.util.Lookup;
  */
 public class EnablePreview implements ErrorRule<Void> {
 
-    private static final Set<String> ERROR_CODES = Collections.unmodifiableSet(new HashSet<String>(Arrays.asList(
-            "compiler.err.preview.feature.disabled",           //NOI18N
-            "compiler.err.preview.feature.disabled.plural",    // NOI18N
-            "compiler.err.is.preview")));                      // NOI18N
+    private static final Set<String> ERROR_CODES = Set.of(
+            "compiler.err.preview.feature.disabled", //NOI18N
+            "compiler.err.preview.feature.disabled.plural", // NOI18N
+            "compiler.err.is.preview", // NOI18N
+            // workaround: if a feature is no longer preview from the perspective of nb-javac,
+            // it may surface as "not supported on source level" error while still requiering
+            // preview on the project target JDK
+            "compiler.err.feature.not.supported.in.source", // NOI18N
+            "compiler.err.feature.not.supported.in.source.plural" // NOI18N
+    );
 
     @Override
     public Set<String> getCodes() {
@@ -79,7 +81,7 @@ public class EnablePreview implements ErrorRule<Void> {
             String sourceLevel = SourceLevelQuery.getSourceLevel(compilationInfo.getFileObject());
 
             if (sourceLevel == null) {
-                return Collections.emptyList();
+                return List.of();
             }
 
             if (sourceLevel.startsWith("1.")) {
@@ -87,20 +89,30 @@ public class EnablePreview implements ErrorRule<Void> {
             }
 
             String newSourceLevel = null;
-
-            if (platformVersion != null && platformVersion.compareTo(new SpecificationVersion(sourceLevel)) > 0) {
-                newSourceLevel = platformVersion.toString();
+            
+            if (platformVersion != null) {
+                if (platformVersion.compareTo(new SpecificationVersion("12")) < 0) {
+                    return List.of(); // preview concept was introduced with JDK 12
+                }
+                if (diagnosticKey.startsWith("compiler.err.feature.not.supported.in.source")
+                        && platformVersion.compareTo(new SpecificationVersion(sourceLevel)) == 0
+                        && compilationInfo.getPreview().isEnabled()) {
+                    return List.of(); // nothing we can do
+                }
+                if (platformVersion.compareTo(new SpecificationVersion(sourceLevel)) > 0) {
+                    newSourceLevel = platformVersion.toString();
+                }
             }
 
             for (Factory factory : Lookup.getDefault().lookupAll(Factory.class)) {
                 PreviewEnabler enabler = factory.enablerFor(file);
                 if (enabler != null) {
-                    return Collections.singletonList(new ResolveFix(enabler, newSourceLevel));
+                    return List.of(new ResolveFix(enabler, newSourceLevel));
                 }
             }
         }
 
-        return Collections.emptyList();
+        return List.of();
     }
 
     @Override
