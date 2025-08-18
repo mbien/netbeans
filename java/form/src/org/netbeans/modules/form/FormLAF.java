@@ -369,6 +369,7 @@ public class FormLAF {
     }
 
     private static void copyMultiUIDefaults(UIDefaults what, Map where) {
+        // TODO this adds -J--add-opens=java.base/java.util=ALL-UNNAMED
         // We cannot invoke what.entrySet() because it was overriden
         // in MultiUIDefaults in JDK 6 Update 10
         try {
