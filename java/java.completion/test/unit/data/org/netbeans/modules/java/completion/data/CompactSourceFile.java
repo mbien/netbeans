@@ -16,31 +16,15 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.netbeans.modules.java.source;
 
-import javax.lang.model.SourceVersion;
+import java.lang.*;
 
-/**
- *
- * @author lahvac
- */
-public class NoJavacHelper {
+//prefix
 
-    public static final int REQUIRED_JAVAC_VERSION = 25; // <- TODO: increment on every release
-    private static final boolean HAS_WORKING_JAVAC;
-
-    static {
-        boolean res;
-        try {
-            SourceVersion.valueOf("RELEASE_"+REQUIRED_JAVAC_VERSION);
-            res = true;
-        } catch (IllegalArgumentException ex) {
-            res = false;
-        }
-        HAS_WORKING_JAVAC = res;
-    }
-
-    public static boolean hasWorkingJavac() {
-        return HAS_WORKING_JAVAC;
-    }
+void main() {
 }
+
+void test() {
+}
+
+//suffix

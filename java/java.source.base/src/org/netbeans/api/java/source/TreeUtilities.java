@@ -79,6 +79,7 @@ import com.sun.tools.javac.tree.JCTree.JCCompilationUnit;
 import com.sun.tools.javac.tree.JCTree.JCExpression;
 import com.sun.tools.javac.tree.JCTree.JCLambda;
 import com.sun.tools.javac.tree.JCTree.JCVariableDecl;
+import com.sun.tools.javac.tree.JCTree.Tag;
 import com.sun.tools.javac.util.JCDiagnostic;
 import com.sun.tools.javac.util.Log;
 import java.lang.reflect.Method;
@@ -400,22 +401,21 @@ public final class TreeUtilities {
             
             public Void scan(Tree tree, Void p) {
                 if (tree != null) {
-                    long startPos = sourcePositions.getStartPosition(getCurrentPath().getCompilationUnit(), tree);
-                    long endPos = sourcePositions.getEndPosition(getCurrentPath().getCompilationUnit(), tree);
+                    CompilationUnitTree cut = getCurrentPath().getCompilationUnit();
+                    long startPos = sourcePositions.getStartPosition(cut, tree);
+                    long endPos = sourcePositions.getEndPosition(cut, tree);
                     if (endPos == (-1)) {
                         switch (tree.getKind()) {
                             case ASSIGNMENT:
                                 if (getCurrentPath().getLeaf().getKind() == Kind.ANNOTATION) {
                                     ExpressionTree value = ((AssignmentTree) tree).getExpression();
-                                    startPos = sourcePositions.getStartPosition(getCurrentPath().getCompilationUnit(), value);
-                                    endPos = sourcePositions.getEndPosition(getCurrentPath().getCompilationUnit(), value);
+                                    startPos = sourcePositions.getStartPosition(cut, value);
+                                    endPos = sourcePositions.getEndPosition(cut, value);
                                 }
                                 break;
                             case CLASS:
-                                ClassTree clazz = (ClassTree) tree;
-
-                                if (!clazz.getMembers().isEmpty()) {
-                                    endPos = sourcePositions.getEndPosition(getCurrentPath().getCompilationUnit(), clazz.getMembers().get(clazz.getMembers().size() - 1));
+                                if (tree instanceof JCClassDecl clazz && (clazz.mods.flags & Flags.IMPLICIT_CLASS) != 0) {
+                                    endPos = sourcePositions.getEndPosition(cut, cut);
                                 }
                                 break;
                         }
@@ -990,6 +990,7 @@ public final class TreeUtilities {
             Env<AttrContext> result = attr.attributeAndCapture((JCTree) tree, env, (JCTree) to);
             try {
                 Constructor<JavacScope> c = JavacScope.class.getDeclaredConstructor(Env.class);
+                // TODO this adds --add-opens=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED
                 c.setAccessible(true);
                 return c.newInstance(result);
             } catch (NoSuchMethodException | SecurityException | InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException ex) {
