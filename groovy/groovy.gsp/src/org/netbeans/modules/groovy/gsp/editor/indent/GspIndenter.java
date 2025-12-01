@@ -135,6 +135,7 @@ public class GspIndenter extends MarkupAbstractIndenter<GspTokenId> {
         int indent = 0;
         if (found) {
             int lineStart = LineDocumentUtils.getLineStart2(getDocument(), ts.offset());
+            //                                ^^^^^^^^^^^^^ rename
             int column = ts.offset();
             indent = column - lineStart;
         }
