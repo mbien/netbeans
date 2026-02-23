@@ -24,6 +24,9 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import java.util.stream.Collectors;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.Lock;
 import org.apache.lucene.store.LockFactory;
@@ -71,9 +74,13 @@ class RecordOwnerLockFactory extends LockFactory {
     public String toString() {
         final StringBuilder sb = new StringBuilder();
         sb.append(getClass().getSimpleName());
-        sb.append('['); //NOI18N
-        sb.append(lockHolder.toString());
-        sb.append("]\n"); //NOI18N
+        // avoid calling directory.toString() from here since it may also call
+        // factory.toString() which would result in infinite recursion
+        sb.append(
+                lockHolder.stream()
+                        .map(e -> e.directory.getClass().getSimpleName() + "@" +  e.directory.hashCode() + "{" + e.lock + "}")  //NOI18N
+                        .collect(Collectors.joining(", ", "[", "]"))  //NOI18N
+        );
         return sb.toString();
     }
 
@@ -87,16 +94,20 @@ class RecordOwnerLockFactory extends LockFactory {
         private RecordOwnerLock(DirectoryLockPair lockedPair) {
             this.lockedPair = lockedPair;
             this.owner = Thread.currentThread();
-            this.caller = new Exception();
+            if (Logger.getLogger(RecordOwnerLockFactory.class.getName()).isLoggable(Level.INFO)) { // TODO reduce to FINE?
+                this.caller = new Exception();
+            } else {
+                this.caller = null;
+            }
         }
 
         @Override
         public String toString() {
             final StringBuilder sb = new StringBuilder();
             sb.append(this.getClass().getSimpleName());
-            sb.append("owned by:[");    //NOI18N
+            sb.append("owned by: ");    //NOI18N
             sb.append(owner);
-            sb.append('(').append(owner == null ? -1 : owner.getId()).append(')');  //NOI18N
+            sb.append('(').append(owner == null ? -1 : owner.getId()).append("); ");  //NOI18N
             sb.append("created from:\n");
             stackTrace(caller == null ? new StackTraceElement[0] : caller.getStackTrace(), sb);
             return sb.toString();
@@ -112,11 +123,7 @@ class RecordOwnerLockFactory extends LockFactory {
             if (!lockHolder.contains(lockedPair)) {
                 final StringBuilder sb = new StringBuilder();
                 sb.append(this.lockedPair);
-                sb.append("owned by:[");    //NOI18N
-                sb.append(owner);
-                sb.append('(').append(owner == null ? -1 : owner.getId()).append(')');  //NOI18N
-                sb.append("created from:\n");
-                stackTrace(caller == null ? new StackTraceElement[0] : caller.getStackTrace(), sb);
+                sb.append(toString());
                 sb.append(" not valid anymore");
                 throw new IOException(sb.toString());
             }
@@ -178,24 +185,5 @@ class RecordOwnerLockFactory extends LockFactory {
         }
     }
 
-    record DirectoryLockPair(Directory directory, String lock) {
-
-        private static final Set<Thread> RECURSION_PROTECTION = ConcurrentHashMap.newKeySet();
-
-        @Override
-        public String toString() {
-            // The directory also outputs the lock in toString(), we need to
-            // protect unlimited recursion
-            if(RECURSION_PROTECTION.contains(Thread.currentThread())) {
-                return "<<RECURSION>>";
-            }
-            try {
-                RECURSION_PROTECTION.add(Thread.currentThread());
-                return "DirectoryLockPair{" + directory + ", " + lock + "}";
-            } finally {
-                RECURSION_PROTECTION.remove(Thread.currentThread());
-            }
-        }
-
-    }
+    record DirectoryLockPair(Directory directory, String lock) {}
 }
