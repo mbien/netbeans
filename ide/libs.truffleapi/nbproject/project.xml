@@ -58,16 +58,16 @@
                 <package>org.graalvm.shadowed.org.jcodings</package>
             </public-packages>
             <class-path-extension>
-                <runtime-relative-path>ext/truffle-api-24.0.0.jar</runtime-relative-path>
-                <binary-origin>external/truffle-api-24.0.0.jar</binary-origin>
+                <runtime-relative-path>ext/truffle-api-25.0.2.jar</runtime-relative-path>
+                <binary-origin>external/truffle-api-25.0.2.jar</binary-origin>
             </class-path-extension>
             <class-path-extension>
-                <runtime-relative-path>ext/truffle-compiler-24.0.0.jar</runtime-relative-path>
-                <binary-origin>external/truffle-compiler-24.0.0.jar</binary-origin>
+                <runtime-relative-path>ext/truffle-compiler-25.0.2.jar</runtime-relative-path>
+                <binary-origin>external/truffle-compiler-25.0.2.jar</binary-origin>
             </class-path-extension>
             <class-path-extension>
-                <runtime-relative-path>ext/truffle-runtime-24.0.0.jar</runtime-relative-path>
-                <binary-origin>external/truffle-runtime-24.0.0.jar</binary-origin>
+                <runtime-relative-path>ext/truffle-runtime-25.0.2.jar</runtime-relative-path>
+                <binary-origin>external/truffle-runtime-25.0.2.jar</binary-origin>
             </class-path-extension>
         </data>
     </configuration>

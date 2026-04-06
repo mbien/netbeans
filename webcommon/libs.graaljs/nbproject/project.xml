@@ -76,24 +76,24 @@
                 <package>com.oracle.truffle.js.lang</package>
             </public-packages>
             <class-path-extension>
-                <runtime-relative-path>ext/js-language-24.0.0.jar</runtime-relative-path>
-                <binary-origin>external/js-language-24.0.0.jar</binary-origin>
+                <runtime-relative-path>ext/js-language-25.0.2.jar</runtime-relative-path>
+                <binary-origin>external/js-language-25.0.2.jar</binary-origin>
             </class-path-extension>
             <class-path-extension>
-                <runtime-relative-path>ext/js-launcher-24.0.0.jar</runtime-relative-path>
-                <binary-origin>external/js-launcher-24.0.0.jar</binary-origin>
+                <runtime-relative-path>ext/js-launcher-25.0.2.jar</runtime-relative-path>
+                <binary-origin>external/js-launcher-25.0.2.jar</binary-origin>
             </class-path-extension>
             <class-path-extension>
-                <runtime-relative-path>ext/js-scriptengine-24.0.0.jar</runtime-relative-path>
-                <binary-origin>external/js-scriptengine-24.0.0.jar</binary-origin>
+                <runtime-relative-path>ext/js-scriptengine-25.0.2.jar</runtime-relative-path>
+                <binary-origin>external/js-scriptengine-25.0.2.jar</binary-origin>
             </class-path-extension>
             <class-path-extension>
-                <runtime-relative-path>ext/regex-24.0.0.jar</runtime-relative-path>
-                <binary-origin>external/regex-24.0.0.jar</binary-origin>
+                <runtime-relative-path>ext/regex-25.0.2.jar</runtime-relative-path>
+                <binary-origin>external/regex-25.0.2.jar</binary-origin>
             </class-path-extension>
             <class-path-extension>
-                <runtime-relative-path>ext/icu4j-24.0.0.jar</runtime-relative-path>
-                <binary-origin>external/icu4j-24.0.0.jar</binary-origin>
+                <runtime-relative-path>ext/icu4j-25.0.2.jar</runtime-relative-path>
+                <binary-origin>external/icu4j-25.0.2.jar</binary-origin>
             </class-path-extension>
         </data>
     </configuration>

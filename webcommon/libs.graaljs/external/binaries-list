@@ -14,8 +14,10 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-C82C42FC2154836A7DB7B0A23B96E031B1C069A9 org.graalvm.js:js-scriptengine:24.0.0
-9A93F546EA83144A7A57E6D80F3991ED83F6D7BD org.graalvm.js:js-language:24.0.0
-218D40861169B063B3193B06C0489A128B172B4E org.graalvm.js:js-launcher:24.0.0
-67571B504B06CF10C909A364936C318CF6373D74 org.graalvm.regex:regex:24.0.0
-2D75AB0726628F9A0A88270EA57CF9C997DB26F4 org.graalvm.shadowed:icu4j:24.0.0
+
+# sync with libs.graalsdk, libs.graalsdk.system, libs.truffleapi, libs.graaljs
+8475698A91B26E5AF5A1F8DB6C0EE494E0932AF2 org.graalvm.js:js-scriptengine:25.0.2
+1BAB7BFEB0E853B22E01C170C5910EC3FED64BD7 org.graalvm.js:js-language:25.0.2
+2B254EFB22B97DEF32B2805F54D1CB7FC88BA22B org.graalvm.js:js-launcher:25.0.2
+D9139554E05FBE619028745419850198249D0B24 org.graalvm.regex:regex:25.0.2
+CADB4D511905A20F2DC0B61320E43736A49E1DFD org.graalvm.shadowed:icu4j:25.0.2

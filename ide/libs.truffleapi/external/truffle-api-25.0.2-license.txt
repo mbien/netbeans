@@ -2,8 +2,8 @@ Name: Truffle API with shaded jcodings library
 Description: Truffle API with shaded jcodings library
 License: UPL-MIT-jcodings
 Origin: https://github.com/oracle/graal https://github.com/jruby/jcodings
-Version: 24.0.0
-Files: truffle-api-24.0.0.jar truffle-compiler-24.0.0.jar truffle-runtime-24.0.0.jar
+Version: 25.0.2
+Files: truffle-api-25.0.2.jar truffle-compiler-25.0.2.jar truffle-runtime-25.0.2.jar
 
 GraalVM Community Edition - UPL
 

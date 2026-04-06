@@ -14,10 +14,12 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-06055903437576484DCC6545AF995FF67E0A3B55 org.graalvm.sdk:launcher-common:24.0.0
-335646EC205A3BCE0D518748D08A5C45900A9869 org.graalvm.shadowed:jline:24.0.0
-26F391313D8B7A4376B0778EA32A075422FB70DD org.graalvm.polyglot:polyglot:24.0.0
-E7FBA15F217232D59E2C7EBA0EE7480F8DBF32B7 org.graalvm.sdk:collections:24.0.0
-B6BD5F7B8A375832A64E7BEA9F2AEED08E7AA9D1 org.graalvm.sdk:nativeimage:24.0.0
-DEA1FD82AECD2B7776FDA84FE944C605B0A44339 org.graalvm.sdk:word:24.0.0
-206525F96C8D47633769F7DD96ADE4C9253E1FD7 org.graalvm.sdk:jniutils:24.0.0
+
+# sync with libs.graalsdk, libs.graalsdk.system, libs.truffleapi, libs.graaljs
+39C1A859D905B7458E76C970637E8113F2E92274 org.graalvm.sdk:launcher-common:25.0.2
+5D8DF56985969EAFDB8851EA185060AB78CC18CC org.graalvm.shadowed:jline:25.0.2
+AE7722E14F72EFAC7172BF66D92C3FD9266ED151 org.graalvm.polyglot:polyglot:25.0.2
+6E921CC0F9986AFF40CB6B96F17C669C18D858C7 org.graalvm.sdk:collections:25.0.2
+51871243791B4BA45AF46DF4AD5E8A35393D1044 org.graalvm.sdk:nativeimage:25.0.2
+2F4E3C92BBA118D3ADAB969956E5EA3D66E96D18 org.graalvm.sdk:word:25.0.2
+BB775E33E75152B04E4000ECCA87CE6341794CF2 org.graalvm.sdk:jniutils:25.0.2
