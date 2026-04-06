@@ -95,6 +95,10 @@
                 <runtime-relative-path>ext/icu4j-25.0.2.jar</runtime-relative-path>
                 <binary-origin>external/icu4j-25.0.2.jar</binary-origin>
             </class-path-extension>
+            <class-path-extension>
+                <runtime-relative-path>ext/xz-25.0.2.jar</runtime-relative-path>
+                <binary-origin>external/xz-25.0.2.jar</binary-origin>
+            </class-path-extension>
         </data>
     </configuration>
 </project>
