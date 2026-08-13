@@ -964,7 +964,7 @@ public class APTUtils implements ChangeListener, PropertyChangeListener {
         }
     }
 
-    private static final class ErrorToleratingProcessor implements Processor {
+    private final class ErrorToleratingProcessor implements Processor {
 
         private final Processor delegate;
         private ProcessingEnvironment processingEnv;
@@ -1051,6 +1051,7 @@ public class APTUtils implements ChangeListener, PropertyChangeListener {
             String message;
             if (delegate.getClass().getName().startsWith(JavacParser.LOMBOK_ANNOTATION_PROCESSOR_PREFIX)) {
                 message = Bundle.ERR_LombokException(NoJavacHelper.REQUIRED_JAVAC_VERSION, exception.toString());
+                classLoaderCache = null; //Lombok may only crash with the exception out of `init` once per ClassLoader; clear the loader so that next time it fails again in the same way
             } else {
                 message = Bundle.ERR_ProcessorException(delegate.getClass().getName(), exception.toString());
             }
