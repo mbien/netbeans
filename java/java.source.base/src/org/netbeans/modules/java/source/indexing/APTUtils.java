@@ -30,12 +30,15 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.lang.ref.Reference;
 import java.lang.ref.SoftReference;
 import java.lang.ref.WeakReference;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
+import java.security.CodeSource;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Enumeration;
@@ -45,6 +48,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.WeakHashMap;
@@ -79,7 +83,6 @@ import org.netbeans.api.project.Project;
 import org.netbeans.api.project.ui.OpenProjects;
 import org.netbeans.modules.classfile.ClassFile;
 import org.netbeans.modules.classfile.Module;
-import org.netbeans.modules.java.source.NoJavacHelper;
 import org.netbeans.modules.java.source.parsing.CachingArchiveClassLoader;
 import org.netbeans.modules.java.source.parsing.JavacParser;
 import org.netbeans.modules.java.source.usages.LongHashMap;
@@ -1008,6 +1011,7 @@ public class APTUtils implements ChangeListener, PropertyChangeListener {
                 throw err;
             } catch (Throwable t) {
                 initFailed = true;
+                classLoaderCache = null; // in case of static initializer failure (e.g lombok); clear the loader so that next time it fails again in the same way
                 Enter enter = Enter.instance(((JavacProcessingEnvironment) processingEnv).getContext());
                 Element topLevel = enter.getEnvs().iterator().hasNext() ? enter.getEnvs().iterator().next().enclClass.sym
                                                                         : null;
@@ -1028,6 +1032,7 @@ public class APTUtils implements ChangeListener, PropertyChangeListener {
                 throw err;
             } catch (Throwable t) {
                 processFailed = true;
+                classLoaderCache = null; // in case of static initializer failure (e.g lombok); clear the loader so that next time it fails again in the same way
                 Element el = roundEnv.getRootElements().isEmpty() ? null : roundEnv.getRootElements().iterator().next();
                 reportError(processingEnv, t, el);
                 return false;
@@ -1036,25 +1041,23 @@ public class APTUtils implements ChangeListener, PropertyChangeListener {
 
         @Messages({
             "# {0} - processor name",
-            "# {1} - processor exception",
-            "ERR_ProcessorException=Annotation processor {0} failed with an exception: {1}",
-            "# {0} - JDK version",
-            "# {1} - processor exception",
-            "ERR_LombokException=Lombok failed, does your version of Lombok support javac from JDK {0}? Exception: {1}"
+            "# {1} - processor jar",
+            "# {2} - processor exception",
+            "# {3} - javac version",
+            "ERR_ProcessorException=An Annotation Processor failed on javac from JDK {3}\n    class: {0}\n    location: {1}\n{2}"
         })
         private void reportError(ProcessingEnvironment processingEnv, Throwable t, Element targetEl) {
-            StringBuilder exception = new StringBuilder();
-            exception.append(t.getMessage()).append("\n");
-            for (StackTraceElement ste : t.getStackTrace()) {
-                exception.append(ste).append("\n");
+            StringWriter exception = new StringWriter();
+            try (PrintWriter pw = new PrintWriter(exception)) {
+                t.printStackTrace(pw);
             }
-            String message;
-            if (delegate.getClass().getName().startsWith(JavacParser.LOMBOK_ANNOTATION_PROCESSOR_PREFIX)) {
-                message = Bundle.ERR_LombokException(NoJavacHelper.REQUIRED_JAVAC_VERSION, exception.toString());
-                classLoaderCache = null; //Lombok may only crash with the exception out of `init` once per ClassLoader; clear the loader so that next time it fails again in the same way
-            } else {
-                message = Bundle.ERR_ProcessorException(delegate.getClass().getName(), exception.toString());
-            }
+            CodeSource codeSource = delegate.getClass().getProtectionDomain().getCodeSource();
+            String message = Bundle.ERR_ProcessorException(
+                    delegate.getClass().getName(),
+                    Objects.toString(codeSource != null ? codeSource.getLocation() : null, "none"),
+                    exception.toString(),
+                    SourceVersion.latest().runtimeVersion().feature()
+            );
             processingEnv.getMessager().printMessage(Diagnostic.Kind.NOTE, message, targetEl);
         }
 

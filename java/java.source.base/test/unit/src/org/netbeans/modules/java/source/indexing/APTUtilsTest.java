@@ -21,7 +21,6 @@ package org.netbeans.modules.java.source.indexing;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
 import java.io.File;
-import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -34,7 +33,6 @@ import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
-import java.util.stream.Stream;
 import javax.swing.event.ChangeListener;
 import javax.tools.JavaCompiler;
 import javax.tools.StandardJavaFileManager;
@@ -61,7 +59,6 @@ import org.netbeans.spi.java.queries.SourceLevelQueryImplementation2;
 import org.openide.filesystems.FileObject;
 import org.openide.filesystems.FileUtil;
 import org.openide.util.ChangeSupport;
-import org.openide.util.Lookup;
 
 /**
  *
@@ -228,7 +225,8 @@ public class APTUtilsTest extends NbTestCase {
                               .stream()
                               .map(d -> d.getMessage(null))
                               .toList();
-                    if (messages.stream().noneMatch(msg -> msg.contains(Bundle.ERR_ProcessorException("AnnotationProcessor", "Broken.")))) {
+                    String firstLine = firstLine(Bundle.ERR_ProcessorException("AnnotationProcessor", "", "Broken.", NoJavacHelper.REQUIRED_JAVAC_VERSION));
+                    if (messages.stream().noneMatch(msg -> msg.contains(firstLine))) {
                         fail("Expected error not found, all messages: " + messages);
                     }
                     if (messages.stream().anyMatch(msg -> msg.contains("Should not get here"))) {
@@ -275,7 +273,8 @@ public class APTUtilsTest extends NbTestCase {
                               .stream()
                               .map(d -> d.getMessage(null))
                               .toList();
-                    if (messages.stream().noneMatch(msg -> msg.contains(Bundle.ERR_ProcessorException("AnnotationProcessor", "Broken.")))) {
+                    String firstLine = firstLine(Bundle.ERR_ProcessorException("AnnotationProcessor", "", "Broken.", NoJavacHelper.REQUIRED_JAVAC_VERSION));
+                    if (messages.stream().noneMatch(msg -> msg.contains(firstLine))) {
                         fail("Expected error not found, all messages: " + messages);
                     }
                     if (messages.stream().anyMatch(msg -> msg.contains("Should not get here"))) {
@@ -334,7 +333,8 @@ public class APTUtilsTest extends NbTestCase {
                               .stream()
                               .map(d -> d.getMessage(null))
                               .toList();
-                    if (messages.stream().noneMatch(msg -> msg.contains(Bundle.ERR_LombokException(NoJavacHelper.REQUIRED_JAVAC_VERSION, "Broken.")))) {
+                    String firstLine = firstLine(Bundle.ERR_ProcessorException("AnnotationProcessor", "", "Broken.", NoJavacHelper.REQUIRED_JAVAC_VERSION));
+                    if (messages.stream().noneMatch(msg -> msg.contains(firstLine))) {
                         fail("Expected error not found, all messages: " + messages);
                     }
                     if (messages.stream().anyMatch(msg -> msg.contains("Should not get here"))) {
@@ -382,7 +382,8 @@ public class APTUtilsTest extends NbTestCase {
                               .stream()
                               .map(d -> d.getMessage(null))
                               .toList();
-                    if (messages.stream().noneMatch(msg -> msg.contains(Bundle.ERR_LombokException(NoJavacHelper.REQUIRED_JAVAC_VERSION, "Broken.")))) {
+                    String firstLine = firstLine(Bundle.ERR_ProcessorException("AnnotationProcessor", "", "Broken.", NoJavacHelper.REQUIRED_JAVAC_VERSION));
+                    if (messages.stream().noneMatch(msg -> msg.contains(firstLine))) {
                         fail("Expected error not found, all messages: " + messages);
                     }
                     if (messages.stream().anyMatch(msg -> msg.contains("Should not get here"))) {
@@ -393,6 +394,12 @@ public class APTUtilsTest extends NbTestCase {
                 processorPath.remove(processorClassesDir);
             }
         }
+    }
+    
+    private String firstLine(String m) {
+        int newLine = m.indexOf('\n');
+        if (newLine == (-1)) return m;
+        return m.substring(0, newLine);
     }
 
     private FileObject compileProcessor(String processorCode) throws Exception {
