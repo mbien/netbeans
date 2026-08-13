@@ -18,6 +18,8 @@
  */
 package org.netbeans.modules.java.source.indexing;
 
+import com.sun.tools.javac.comp.Enter;
+import com.sun.tools.javac.processing.JavacProcessingEnvironment;
 import com.sun.tools.javac.util.Abort;
 import com.sun.tools.javac.util.ClientCodeException;
 import com.sun.tools.javac.util.Context;
@@ -77,6 +79,7 @@ import org.netbeans.api.project.Project;
 import org.netbeans.api.project.ui.OpenProjects;
 import org.netbeans.modules.classfile.ClassFile;
 import org.netbeans.modules.classfile.Module;
+import org.netbeans.modules.java.source.NoJavacHelper;
 import org.netbeans.modules.java.source.parsing.CachingArchiveClassLoader;
 import org.netbeans.modules.java.source.parsing.JavacParser;
 import org.netbeans.modules.java.source.usages.LongHashMap;
@@ -1005,18 +1008,15 @@ public class APTUtils implements ChangeListener, PropertyChangeListener {
                 throw err;
             } catch (Throwable t) {
                 initFailed = true;
-                StringBuilder exception = new StringBuilder();
-                exception.append(t.getMessage()).append("\n");
-                for (StackTraceElement ste : t.getStackTrace()) {
-                    exception.append(ste).append("\n");
-                }
-                processingEnv.getMessager().printMessage(Diagnostic.Kind.NOTE, Bundle.ERR_ProcessorException(delegate.getClass().getName(), exception.toString()));
+                Enter enter = Enter.instance(((JavacProcessingEnvironment) processingEnv).getContext());
+                Element topLevel = enter.getEnvs().iterator().hasNext() ? enter.getEnvs().iterator().next().enclClass.sym
+                                                                        : null;
+                reportError(processingEnv, t, topLevel);
             }
             this.processingEnv = processingEnv;
         }
 
         @Override
-        @Messages("ERR_ProcessorException=Annotation processor {0} failed with an exception: {1}")
         public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
             if (initFailed || processFailed) {
                 return false;
@@ -1029,14 +1029,32 @@ public class APTUtils implements ChangeListener, PropertyChangeListener {
             } catch (Throwable t) {
                 processFailed = true;
                 Element el = roundEnv.getRootElements().isEmpty() ? null : roundEnv.getRootElements().iterator().next();
-                StringBuilder exception = new StringBuilder();
-                exception.append(t.getMessage()).append("\n");
-                for (StackTraceElement ste : t.getStackTrace()) {
-                    exception.append(ste).append("\n");
-                }
-                processingEnv.getMessager().printMessage(Diagnostic.Kind.NOTE, Bundle.ERR_ProcessorException(delegate.getClass().getName(), exception.toString()), el);
+                reportError(processingEnv, t, el);
                 return false;
             }
+        }
+
+        @Messages({
+            "# {0} - processor name",
+            "# {1} - processor exception",
+            "ERR_ProcessorException=Annotation processor {0} failed with an exception: {1}",
+            "# {0} - JDK version",
+            "# {1} - processor exception",
+            "ERR_LombokException=Lombok failed, does your version of Lombok support javac from JDK {0}? Exception: {1}"
+        })
+        private void reportError(ProcessingEnvironment processingEnv, Throwable t, Element targetEl) {
+            StringBuilder exception = new StringBuilder();
+            exception.append(t.getMessage()).append("\n");
+            for (StackTraceElement ste : t.getStackTrace()) {
+                exception.append(ste).append("\n");
+            }
+            String message;
+            if (delegate.getClass().getName().startsWith(JavacParser.LOMBOK_ANNOTATION_PROCESSOR_PREFIX)) {
+                message = Bundle.ERR_LombokException(NoJavacHelper.REQUIRED_JAVAC_VERSION, exception.toString());
+            } else {
+                message = Bundle.ERR_ProcessorException(delegate.getClass().getName(), exception.toString());
+            }
+            processingEnv.getMessager().printMessage(Diagnostic.Kind.NOTE, message, targetEl);
         }
 
         @Override
