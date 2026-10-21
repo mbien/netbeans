@@ -142,7 +142,7 @@ jobs:
     timeout-minutes: 40
     strategy:
       matrix:
-        java: [ '21', '25', '27-ea' ]
+        java: [ '21', '25', '27' ]
         exclude:
           - java: ${{ github.event_name == 'pull_request' && 'nothing' || '25' }}
       fail-fast: false
@@ -249,7 +249,7 @@ jobs:
         java: [ '21' ]
         include:
           - os: ubuntu-latest
-            java: 27-ea
+            java: 27
       fail-fast: false
     steps:
 
@@ -468,7 +468,6 @@ jobs:
       - name: Build javadoc
         if: env.test_javadoc == 'true' && success()
         run: |
-          export ANT_OPTS=-Djdk.xml.totalEntitySizeLimit=200000
           ant $OPTS -Djavadoc.fail.broken.links=true build-javadoc
 
       - name: Create Test Summary
@@ -662,6 +661,9 @@ jobs:
       - name: ide/extexecution.base
         run: ant $OPTS -f ide/extexecution.base test
 
+      - name: ide/generic.project
+        run: ant $OPTS -f ide/generic.project test
+
       - name: ide/gsf.testrunner.ui
         run: ant $OPTS -f ide/gsf.testrunner.ui test
 
@@ -694,6 +696,9 @@ jobs:
 
       - name: ide/languages.env
         run: ant $OPTS -f ide/languages.env test
+
+      - name: ide/languages.go
+        run: ant $OPTS -f ide/languages.go test
 
       - name: ide/languages.hcl
         run: ant $OPTS -f ide/languages.hcl test
@@ -760,6 +765,9 @@ jobs:
 
       - name: ide/projectuiapi.base
         run: ant $OPTS -f ide/projectuiapi.base test
+
+      - name: ide/projectui
+        run: ant $OPTS -f ide/projectui test
 
       - name: ide/refactoring.api
         run: ant $OPTS -f ide/refactoring.api test
@@ -867,7 +875,7 @@ jobs:
     timeout-minutes: 50
     strategy:
       matrix:
-        java: [ '21', '25', '27-ea' ]
+        java: [ '21', '25', '27' ]
         exclude:
           - java: ${{ github.event_name == 'pull_request' && 'nothing' || '25' }}
       fail-fast: false
@@ -1470,10 +1478,10 @@ jobs:
     timeout-minutes: 60
     strategy:
       matrix:
-        java: [ '21', '27-ea' ]
+        java: [ '21', '27' ]
         config: [ 'batch1', 'batch2' ]
         exclude:
-          - java: ${{ github.event_name == 'pull_request' && 'nothing' || '27-ea' }}
+          - java: ${{ github.event_name == 'pull_request' && 'nothing' || '27' }}
       fail-fast: false
     steps:
 
@@ -1528,7 +1536,7 @@ jobs:
     timeout-minutes: 60
     strategy:
       matrix:
-        java: [ '21', '25', '27-ea' ]
+        java: [ '21', '25', '27' ]
         exclude:
           - java: ${{ github.event_name == 'pull_request' && 'nothing' || '25' }}
       fail-fast: false
@@ -2128,9 +2136,9 @@ jobs:
 #      - name: web.freeform
 #        run: ant $OPTS -f enterprise/web.freeform test
 
-# Fails
-#      - name: web.jsf.editor
-#        run: ant $OPTS -f enterprise/web.jsf.editor test
+# only unit tests, IT fails + slow
+      - name: web.jsf.editor
+        run: ant $OPTS -f enterprise/web.jsf.editor test-unit
 
 # Fails
 #      - name: web.jsf.navigation
@@ -2591,8 +2599,7 @@ jobs:
     #  * nothing else failed (allows manual restarts)
     #  * the workflow got cancelled
     if: ${{ always() && needs.base-build.result == 'success' && (!contains(needs.*.result, 'failure') || cancelled()) }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
+    runs-on: ubuntu-slim
     steps:
 
       - name: Delete Workspace Artifact
