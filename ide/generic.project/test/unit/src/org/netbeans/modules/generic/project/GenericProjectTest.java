@@ -109,7 +109,7 @@ public class GenericProjectTest extends NbTestCase {
         assertEquals(Set.of(child, deep), projectDirectories(spp.getSubprojects()));
     }
 
-    public void testContainerProviderRecursiveAndComplete() throws Exception {
+    public void testContainerProviderCompleteContainedSet() throws Exception {
         FileObject root = newProjectDir();
         FileUtil.createData(root, GenericProject.MARKER_FILE);
         FileObject child = FileUtil.createFolder(root, "child"); // NOI18N
@@ -122,8 +122,9 @@ public class GenericProjectTest extends NbTestCase {
         ProjectContainerProvider pcp = prj.getLookup().lookup(ProjectContainerProvider.class);
         assertNotNull(pcp);
         ProjectContainerProvider.Result res = pcp.getContainedProjects();
-        assertTrue("the transitive set must be reported as recursive", res.isRecursive());
-        assertEquals(Set.of(child, deep), projectDirectories(res.getProjects()));
+        assertTrue("the contained set must be reported as complete", res.isRecursive());
+        assertEquals("projects nested deeper than the directory are not exposed",
+                Set.of(child), projectDirectories(res.getProjects()));
         for (Project p : res.getProjects()) {
             assertNotSame("the container must not list itself", prj, p);
         }

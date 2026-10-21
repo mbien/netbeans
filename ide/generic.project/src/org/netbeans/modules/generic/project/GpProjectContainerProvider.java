@@ -35,17 +35,14 @@ import org.openide.util.ChangeSupport;
 import org.openide.util.Exceptions;
 
 /**
- * Exposes the projects contained in the project directory (at any
- * depth) as subprojects: the project is a container for every
- * project found beneath it, so the stock subprojects group and
- * "Open Required Projects" discover nested projects through this
- * project instead of a hard-coded directory scan.
+ * Exposes the projects contained in the project directory as
+ * subprojects: the project is a container for the projects in its
+ * directory, so the stock subprojects group and "Open Required
+ * Projects" discover them through this project instead of a
+ * hard-coded directory scan.
  *
  * <p>Implements both the newer {@link ProjectContainerProvider}
- * and the legacy {@link SubprojectProvider} over the same set. The
- * result is reported as {@code recursive}, i.e. the full
- * transitive set: consumers that re-visit projects already seen
- * (the stock subprojects group) must not truncate the list.
+ * and the legacy {@link SubprojectProvider} over the same set.
  */
 final class GpProjectContainerProvider implements ProjectContainerProvider, SubprojectProvider {
 
@@ -61,7 +58,7 @@ final class GpProjectContainerProvider implements ProjectContainerProvider, Subp
         Set<Project> projects = new LinkedHashSet<>();
         collectProjects(prj.getProjectDirectory(), projects, true);
         projects.remove(prj);
-        return new Result(projects, true);
+        return new Result(projects, false);
     }
 
     @Override
@@ -70,11 +67,10 @@ final class GpProjectContainerProvider implements ProjectContainerProvider, Subp
     }
 
     /**
-     * Recursively collects the projects contained in the given
-     * folder, mirroring the stock directory group's scan: folders
+     * Collects the projects contained in the given folder: folders
      * only, a {@code findProject} per folder, convertor projects
      * skipped, and the children of a {@code NOT_SHARABLE} folder
-     * skipped (the check is skipped once an ancestor is proven
+     * skipped (the check is skipped once the folder is proven
      * {@code SHARABLE}).
      */
     private void collectProjects(FileObject dir, Set<Project> projects, boolean checkShare) {
@@ -101,8 +97,6 @@ final class GpProjectContainerProvider implements ProjectContainerProvider, Subp
                 projects.add(p);
             }
             checkShare = share != SharabilityQuery.Sharability.SHARABLE;
-            // don't need to check the sharability if the current folder is marked as recursively sharable
-            collectProjects(child, projects, checkShare);
         }
     }
 
