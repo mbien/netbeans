@@ -92,7 +92,7 @@ public class GenericProjectTest extends NbTestCase {
         assertEquals(2, children.length);
     }
 
-    public void testSubprojectsAreAllNestedProjects() throws Exception {
+    public void testSubprojectsAreContainedProjects() throws Exception {
         FileObject root = newProjectDir();
         FileUtil.createData(root, GenericProject.MARKER_FILE);
         FileObject child = FileUtil.createFolder(root, "child"); // NOI18N
@@ -106,7 +106,8 @@ public class GenericProjectTest extends NbTestCase {
         assertNotNull(prj);
         SubprojectProvider spp = prj.getLookup().lookup(SubprojectProvider.class);
         assertNotNull(spp);
-        assertEquals(Set.of(child, deep), projectDirectories(spp.getSubprojects()));
+        assertEquals("projects nested deeper than the directory are not exposed",
+        Set.of(child), projectDirectories(spp.getSubprojects()));
     }
 
     public void testContainerProviderCompleteContainedSet() throws Exception {
