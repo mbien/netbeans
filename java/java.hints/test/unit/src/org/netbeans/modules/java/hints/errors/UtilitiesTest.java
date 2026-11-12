@@ -448,6 +448,27 @@ public class UtilitiesTest extends NbTestCase {
                 false);
     }
 
+    public void testExitsAllBranchesYield() throws Exception {
+        performExitsTest(
+                """
+                package test;
+                public class Test {
+                    public int test(int param) {
+                        return switch (param) {
+                            default -> {
+                                i|f (param == 0) {
+                                    yield 0;
+                                } else {
+                                    yield 1;
+                                }
+                            }
+                        };
+                    }
+                }
+                """,
+                true);
+    }
+
     private void performExitsTest(String code, boolean expected) throws Exception {
         int caretPos = code.indexOf('|');
         code = code.replace("|", "");
@@ -578,11 +599,11 @@ public class UtilitiesTest extends NbTestCase {
     private static void assertFieldGroup(CompilationInfo info, Collection<? extends TreePath> group, int goldenStart, int goldenEnd, int numOfElements) {
         assertEquals(numOfElements, group.size());
         
-        int start = (int) info.getTrees().getSourcePositions().getStartPosition(info.getCompilationUnit(), group.iterator().next().getLeaf());
+        int start = (int) info.getTrees().getSourcePositions().getStartPosition(group.iterator().next().getLeaf());
         int end = -1;
 
         for (TreePath tp : group) {
-            end = (int) info.getTrees().getSourcePositions().getEndPosition(info.getCompilationUnit(), tp.getLeaf());
+            end = (int) info.getTrees().getSourcePositions().getEndPosition(tp.getLeaf());
         }
 
         assertEquals(goldenStart, start);

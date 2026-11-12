@@ -27,7 +27,6 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.net.URL;
-import java.text.Collator;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -122,11 +121,7 @@ public final class OpenProjectList {
      * otherwise we get a deadlock fairly fast 
      */
     static final Mutex MUTEX = new Mutex();
-    
-    public static Comparator<Project> projectByDisplayName() {
-        return new ProjectByDisplayNameComparator();
-    }
-    
+
     // Property names
     public static final String PROPERTY_OPEN_PROJECTS = "OpenProjects";
     public static final String PROPERTY_WILL_OPEN_PROJECTS = "willOpenProjects"; // NOI18N
@@ -219,6 +214,10 @@ public final class OpenProjectList {
     
     public static void waitProjectsFullyOpen() {
         getDefault().LOAD.waitFinished(0);
+    }
+
+    public static Comparator<? super Project> projectByPath() {
+        return PROJECT_BY_PATH_COMPARATOR;
     }
 
     static void preferredProject(final Project lazyP) {
@@ -1922,49 +1921,35 @@ public final class OpenProjectList {
         
     }
     
-    private static class ProjectByDisplayNameComparator implements Comparator<Project> {
-        
-        private static final Comparator<Object> COLLATOR = Collator.getInstance();
+    /// ensures that child dirs follow right after the parent
+    private static final Comparator<String> PATH_COMPONENT_COMPARATOR = (p1, p2) -> {
+        String[] comp1 = p1.split("/");
+        String[] comp2 = p2.split("/");
+        int min = Math.min(comp1.length, comp2.length);
+        for (int i = 0; i < min; i++) {
+            int c = comp1[i].compareTo(comp2[i]);
+            if (c != 0) {
+                return c;
+            }
+        }
+        return Integer.compare(comp1.length, comp2.length);
+    };
 
-        // memoize results since it could be called >1 time per project:
-        private final Map<Project,String> names = new HashMap<Project,String>();
-        private String getDisplayName(Project p) {
-            String n = names.get(p);
-            if (n == null) {
-                n = ProjectUtils.getInformation(p).getDisplayName();
-                names.put(p, n);
-            }
-            return n;
+    private static final Comparator<Project> PROJECT_BY_PATH_COMPARATOR = (p1, p2) -> {
+        if (p1 == null && p2 == null) {
+            return 0;
         }
-        
-        @Override
-        public int compare(Project p1, Project p2) {
-//            Uncoment to make the main project be the first one
-//            but then needs to listen to main project change
-//            if ( OpenProjectList.getDefault().isMainProject( p1 ) ) {
-//                return -1;
-//            }
-//            
-//            if ( OpenProjectList.getDefault().isMainProject( p2 ) ) {
-//                return 1;
-//            }
-            
-            String n1 = getDisplayName(p1);
-            String n2 = getDisplayName(p2);
-            if (n1 != null && n2 != null) {
-                return COLLATOR.compare(n1, n2);
-            } else if (n1 == null && n2 != null) {
-                log(Level.WARNING, p1 + ": ProjectInformation.getDisplayName() should not return null!");
-                return -1;
-            } else if (n1 != null && n2 == null) {
-                log(Level.WARNING, p2 + ": ProjectInformation.getDisplayName() should not return null!");
-                return 1;
-            }
-            return 0; // both null
-            
+        if (p1 == null) {
+            return -1;
         }
-        
-    }
+        if (p2 == null) {
+            return 1;
+        }
+        return PATH_COMPONENT_COMPARATOR.compare(
+            p1.getProjectDirectory().getPath(), // String normalized with '/' separator
+            p2.getProjectDirectory().getPath()
+        );
+    };
     
     private final class NbProjectDeletionListener extends FileChangeAdapter {
         

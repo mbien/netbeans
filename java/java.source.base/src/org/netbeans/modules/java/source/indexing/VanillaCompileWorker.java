@@ -577,6 +577,15 @@ final class VanillaCompileWorker extends CompileWorker {
             }
             
             @Override
+            public Void visitPackage(PackageTree node, Void p) {
+                JCPackageDecl decl = (JCPackageDecl) node;
+                if (decl.packge != null) {
+                    clearAnnotations(decl.packge.getMetadata());
+                }
+                return super.visitPackage(node, p);
+            }
+
+            @Override
             public Void visitVariable(VariableTree node, Void p) {
                 JCTree.JCVariableDecl decl = (JCTree.JCVariableDecl) node;
                 scan(node.getModifiers(), null);
@@ -900,8 +909,8 @@ final class VanillaCompileWorker extends CompileWorker {
             }
 
             private SortedMap<Long, List<Diagnostic<? extends JavaFileObject>>> treeDiags(Tree node) {
-                long start = trees.getSourcePositions().getStartPosition(cut, node);
-                long end = trees.getSourcePositions().getEndPosition(cut, node);
+                long start = trees.getSourcePositions().getStartPosition(node);
+                long end = trees.getSourcePositions().getEndPosition(node);
                 SortedMap<Long, List<Diagnostic<? extends JavaFileObject>>> classDiags = start < end ? diags.subMap(start, end) : new TreeMap<>();
                 return classDiags;
             }
