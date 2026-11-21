@@ -28,7 +28,7 @@ import org.apache.maven.artifact.Artifact;
  * legacy Maven Dependency Tree library and keeps the subset of its API that NetBeans uses.
  * Nodes use identity for {@code equals} and {@code hashCode}.
  *
- * @since 2.90
+ * @since 3.0
  */
 public final class DependencyNode {
 

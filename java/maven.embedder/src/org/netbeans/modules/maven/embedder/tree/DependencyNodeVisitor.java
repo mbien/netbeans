@@ -21,7 +21,7 @@ package org.netbeans.modules.maven.embedder.tree;
 /**
  * Visits the nodes of a dependency tree in pre-order.
  *
- * @since 2.90
+ * @since 3.0
  */
 public interface DependencyNodeVisitor {
 

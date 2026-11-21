@@ -86,7 +86,7 @@ is the proper place.
         <change id="own-dependency-tree">
             <api name="general"/>
             <summary>Dependency tree no longer based on maven-dependency-tree</summary>
-            <version major="2" minor="90"/>
+            <version major="3" minor="0"/>
             <date day="9" month="10" year="2026"/>
             <author login="slachiewicz"/>
             <compatibility binary="incompatible" source="incompatible" semantic="compatible" deprecation="no" addition="yes" modification="yes" deletion="yes"/>
