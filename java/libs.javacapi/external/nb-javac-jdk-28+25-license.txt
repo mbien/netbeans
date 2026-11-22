@@ -1,7 +1,7 @@
 Name: Javac Compiler Implementation
 Description: Javac Compiler Implementation
-Version: 28+23
-Files: nb-javac-jdk-28+23-api.jar nb-javac-jdk-28+23.jar
+Version: 28+25
+Files: nb-javac-jdk-28+25-api.jar nb-javac-jdk-28+25.jar
 License: GPL-2-CP
 Origin: OpenJDK (https://github.com/openjdk/jdk)
 Source: https://github.com/openjdk/jdk

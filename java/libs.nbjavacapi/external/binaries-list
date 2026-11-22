@@ -14,5 +14,5 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-1B202FEC189AAE91E1C8110149F262742591A19D https://mbien.dev/tmp/nb-javac-jdk-28+23.jar nb-javac-jdk-28+23.jar
-B732EE55E97B6CD98D6A4BBC62AAC11DCB96184D https://mbien.dev/tmp/nb-javac-jdk-28+23-api.jar nb-javac-jdk-28+23-api.jar
+9BDD31AED0298765404DD9C80A80D138707DC7ED io.github.netbaunir:nb-javac:jdk-28+25
+35781EAA6427173BF761F9C2A3A4C395D6A6C841 io.github.netbaunir:nb-javac:jdk-28+25:api
