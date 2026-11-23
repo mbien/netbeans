@@ -1589,7 +1589,9 @@ jobs:
       - name: debugger.jpda.projectsui
         run: ant $OPTS -f java/debugger.jpda.projectsui test
 
+      # TODO fails on 28b25
       - name: debugger.jpda.truffle
+        if: ${{ matrix.java == '21' || matrix.java == '25' }}
         run: ant $OPTS -f java/debugger.jpda.truffle test
 
       - name: debugger.jpda.ui
