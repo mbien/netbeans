@@ -22,22 +22,39 @@ package org.netbeans.modules.debugger.jpda.ui;
 import com.sun.jdi.AbsentInformationException;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
-import java.lang.reflect.InvocationTargetException;
-import java.util.*;
+import java.lang.ref.WeakReference;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import org.netbeans.api.debugger.*;
+import org.netbeans.api.debugger.ActionsManagerListener;
+import org.netbeans.api.debugger.Breakpoint;
+import org.netbeans.api.debugger.DebuggerEngine;
 import org.netbeans.api.debugger.DebuggerManager;
+import org.netbeans.api.debugger.DebuggerManagerListener;
+import org.netbeans.api.debugger.LazyActionsManagerListener;
 import org.netbeans.api.debugger.Session;
-import org.netbeans.api.debugger.jpda.*;
+import org.netbeans.api.debugger.Watch;
+import org.netbeans.api.debugger.jpda.CallStackFrame;
+import org.netbeans.api.debugger.jpda.ExceptionBreakpoint;
+import org.netbeans.api.debugger.jpda.InvalidExpressionException;
+import org.netbeans.api.debugger.jpda.JPDABreakpoint;
+import org.netbeans.api.debugger.jpda.JPDADebugger;
+import org.netbeans.api.debugger.jpda.JPDAThread;
+import org.netbeans.api.debugger.jpda.LineBreakpoint;
+import org.netbeans.api.debugger.jpda.ObjectVariable;
+import org.netbeans.api.debugger.jpda.ThreadBreakpoint;
+import org.netbeans.api.debugger.jpda.Variable;
 import org.netbeans.api.debugger.jpda.event.JPDABreakpointEvent;
 import org.netbeans.api.debugger.jpda.event.JPDABreakpointListener;
 import org.netbeans.modules.debugger.jpda.DebuggerConsoleIO;
 import org.netbeans.modules.debugger.jpda.JPDADebuggerImpl;
+import org.netbeans.modules.debugger.jpda.ui.models.BreakpointsActionsProvider;
 import org.netbeans.modules.debugger.jpda.ui.models.BreakpointsNodeModel;
+import org.netbeans.modules.debugger.jpda.ui.views.BreakpointOutputWriter;
 import org.netbeans.spi.debugger.ContextProvider;
+import org.netbeans.spi.debugger.jpda.ObjectInfoProvider;
 import org.netbeans.spi.viewmodel.NodeModel;
-import org.openide.util.Exceptions;
 import org.openide.util.NbBundle;
 
 /**
@@ -57,6 +74,7 @@ PropertyChangeListener {
         ("\\\\");
     private static final String threadNamePattern = "{threadName}";
     private static final String classNamePattern = "{className}";
+    private static final String localsPattern = "{locals}";
     private static final Pattern methodNamePattern = Pattern.compile
         ("\\{methodName\\}");
     private static final Pattern lineNumberPattern = Pattern.compile
@@ -83,8 +101,7 @@ PropertyChangeListener {
         DebuggerManager.getDebuggerManager ().addDebuggerListener
             (DebuggerManager.PROP_BREAKPOINTS, this);
     }
-    
-    
+
     // LazyActionsManagerListener ..............................................
     
     @Override
@@ -141,13 +158,14 @@ PropertyChangeListener {
         if (printText == null || printText.length  () == 0) {
             return;
         }
-        printText = substitute(printText, event);
         JPDADebuggerImpl dbg;
         synchronized (lock) {
             dbg = (JPDADebuggerImpl) debugger;
         }
+
+
         if (dbg != null) {
-            dbg.getConsoleIO().println(printText, null);
+            printOutEvent(dbg.getConsoleIO(), printText, event);
         }
     }
 
@@ -269,35 +287,21 @@ PropertyChangeListener {
     // private methods .........................................................
     
     /**
-     *   threadName      name of thread where breakpoint ocurres
-     *   className       name of class where breakpoint ocurres
-     *   methodName      name of method where breakpoint ocurres
-     *   lineNumber      number of line where breakpoint ocurres
      *
-     * @param printText
-     * @return
+     * @param format the format of the line to print
      */
-    private String substitute (String printText, JPDABreakpointEvent event) {
-        
+    private void printOutEvent(DebuggerConsoleIO io, String format, JPDABreakpointEvent event) {
+        String printText = format;
         // 1) replace {threadName} by the name of current thread
-        JPDAThread t = event.getThread ();
+        JPDAThread t = event.getThread();
         if (t != null) {
             printText = printText.replace(threadNamePattern, t.getName ());
         } else {
             printText = printText.replace(threadNamePattern, "?");
         }
         
-        boolean isThreadDeath = false;
-        if (t != null) {
-            try {
-                java.lang.reflect.Field f = event.getClass().getDeclaredField("event"); // NOI18N
-                f.setAccessible(true);
-                com.sun.jdi.event.Event je = (com.sun.jdi.event.Event) f.get(event);
-                isThreadDeath = (je instanceof com.sun.jdi.event.ThreadDeathEvent);
-            } catch (Exception ex) {
-                Exceptions.printStackTrace(ex);
-            }
-        }
+        boolean isThreadDeath = event.isThreadDeath();
+
         // 2) replace {className} by the name of current class
         if (event.getReferenceType () != null) {
             printText = printText.replace(classNamePattern, event.getReferenceType().name());
@@ -371,69 +375,141 @@ PropertyChangeListener {
                 printText = selectCondition(printText, threadStartedCondition, false);
             }
         }
+
+        boolean printLocals = false;
+        for (;;) {
+            int localsAt = printText.indexOf(localsPattern);
+            if (localsAt == -1) {
+                break;
+            }
+            printText = printText.substring(0, localsAt) + printText.substring(localsAt + localsPattern.length());
+            printLocals = true;
+        }
              
         // 5) resolve all expressions {=expression}
+        printExpressions(event, printText, io::printWithAction);
+
+        if (printLocals) {
+            printLocals(event, io::printWithAction);
+        }
+    }
+
+    /* Processing all expressions. Expressions take form of {=expression}.
+    * Invoked from {@code BreakpointOutputTest}.
+    */
+    final void printExpressions(
+        JPDABreakpointEvent event,
+        String message,
+        BreakpointOutputWriter io
+    ) {
+        String printText = message;
+        Session session = event.getDebugger().getSession();
+        var dumpErrors = new ArrayList<Runnable>();
         for (;;) {
             Matcher m = expressionPattern.matcher (printText);
             if (!m.find ()) {
                 break;
             }
             String expression = m.group (1);
-            String value = "";
             try {
                 JPDADebugger theDebugger;
                 synchronized (lock) {
                     if (debugger == null) {
-                        return value; // The debugger is gone
+                        // The debugger is gone
+                        return;
                     }
                     theDebugger = debugger;
                 }
-                CallStackFrame csf = null;
-                if (t != null && !isThreadDeath) {
-                    try {
-                        CallStackFrame[] topFramePtr = t.getCallStack(0, 1);
-                        if (topFramePtr.length > 0) {
-                            csf = topFramePtr[0];
+
+                String beforeExpression = printText.substring(0, m.start());
+                io.print(beforeExpression, null, false);
+
+                CallStackFrame csf = findTopFrame(event);
+                Variable refValue = theDebugger.evaluate(expression, csf);
+                if (refValue instanceof ObjectVariable obj && !isNull(obj)) {
+                    var sessionRef = new WeakReference<>(session);
+                    io.print(obj.getValue(), () -> {
+                        var s = sessionRef.get();
+                        var ok = s != null && ObjectInfoProvider.showObjectInfo(s, obj);
+                        if (!ok) {
+                            io.print("Cannot display details of " + obj.getValue(), null, true);
                         }
-                    } catch (AbsentInformationException aiex) {}
+                    }, false);
+                } else {
+                    String textualValue = refValue == null ? "null" : refValue.getValue();
+                    io.print(textualValue, null, false);
                 }
-                try {
-                value = ((Variable) theDebugger.getClass().getMethod("evaluate", String.class, CallStackFrame.class).
-                        invoke(theDebugger, expression, csf)).getValue();
-                } catch (InvocationTargetException itex) {
-                    if (itex.getTargetException() instanceof InvalidExpressionException) {
-                        throw (InvalidExpressionException) itex.getTargetException();
-                    }
-                } catch (Exception ex) {
-                    Exceptions.printStackTrace(ex);
-                }
-                //value = theDebugger.evaluate (expression, csf).getValue ();
-                value = backslashEscapePattern.matcher (value).
-                    replaceAll ("\\\\\\\\");
-                value = dollarEscapePattern.matcher (value).
-                    replaceAll ("\\\\\\$");
-            } catch (InvalidExpressionException e) {
+            } catch (Exception e) {
                 // expression is invalid or cannot be evaluated
-                String msg = e.getCause () != null ? 
-                    e.getCause ().getMessage () : e.getMessage ();
-                JPDADebuggerImpl dbg;
-                synchronized (lock) {
-                    dbg = (JPDADebuggerImpl) debugger;
-                }
-                if (dbg != null) {
-                    dbg.getConsoleIO().println (
-                            "Cannot evaluate expression '" + expression + "' : " + msg, 
-                            null
-                        );
-                }
+                Throwable cause = e.getCause();
+                String msg = cause != null ? cause.getMessage() : e.getMessage();
+                Breakpoint bp = event.getSource();
+                Runnable configure = () -> {
+                    BreakpointsActionsProvider.customize(bp);
+                };
+                dumpErrors.add(() -> {
+                    io.print("  ", null, false);
+                    io.print(msg, configure, true);
+                });
+                io.print("{=" + expression + "}", configure, false);
             }
-            printText = m.replaceFirst (value);
+            // process the rest of the text
+            printText = printText.substring(m.end());
         }
         Throwable thr = event.getConditionException();
         if (thr != null) {
             printText = printText + "\n***\n"+ thr.getLocalizedMessage()+"\n***\n";
         }
-        return printText;
+        // remaining of the text with a new line
+        io.print(printText, null, true);
+        for (var errors : dumpErrors) {
+            errors.run();
+        }
+    }
+
+    final void printLocals(JPDABreakpointEvent event, BreakpointOutputWriter io) {
+        CallStackFrame csf = findTopFrame(event);
+        if (csf != null) {
+            try {
+                for (var refValue : csf.getLocalVariables()) {
+                    io.print("  ", null, false);
+                    io.print(refValue.getName(), null, false);
+                    io.print(" = ", null, false);
+                    if (refValue instanceof ObjectVariable ov && !isNull(ov) && ov.asValue() instanceof ObjectVariable obj) {
+                        var sessionRef = new WeakReference<>(event.getDebugger().getSession());
+                        io.print(obj.getValue(), () -> {
+                            var s = sessionRef.get();
+                            var ok = s != null && ObjectInfoProvider.showObjectInfo(s, obj);
+                            if (!ok) {
+                                io.print("Cannot display details of " + obj.getValue(), null, true);
+                            }
+                        }, true);
+                    } else {
+                        io.print(refValue.getValue(), null, true);
+                    }
+                }
+            } catch (AbsentInformationException ex) {
+                // no locals info
+            }
+        }
+    }
+
+
+    private CallStackFrame findTopFrame(JPDABreakpointEvent event) {
+        if (event.getThread() != null && !event.isThreadDeath()) {
+            try {
+                CallStackFrame[] topFramePtr = event.getThread().getCallStack(0, 1);
+                if (topFramePtr.length > 0) {
+                    return topFramePtr[0];
+                }
+            } catch (AbsentInformationException aiex) {
+            }
+        }
+        return null;
+    }
+
+    private static boolean isNull(ObjectVariable obj) {
+        return obj.getUniqueID() == 0;
     }
 
     private static String selectCondition(String printText, String condition, boolean isTrue) {
@@ -527,13 +603,11 @@ PropertyChangeListener {
     private BreakpointsNodeModel breakpointsNodeModel;
     private BreakpointsNodeModel getBreakpointsNodeModel () {
         if (breakpointsNodeModel == null) {
-            List l = DebuggerManager.getDebuggerManager ().lookup
-                ("BreakpointsView", NodeModel.class);
-            Iterator it = l.iterator ();
-            while (it.hasNext ()) {
-                NodeModel nm = (NodeModel) it.next ();
-                if (nm instanceof BreakpointsNodeModel) {
-                    breakpointsNodeModel = (BreakpointsNodeModel) nm;
+            List<? extends NodeModel> list = DebuggerManager.getDebuggerManager ().lookup
+                        ("BreakpointsView", NodeModel.class);
+            for (NodeModel nodeModel : list) {
+                if (nodeModel instanceof BreakpointsNodeModel model) {
+                    breakpointsNodeModel = model;
                     break;
                 }
             }

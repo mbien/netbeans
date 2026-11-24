@@ -407,13 +407,78 @@ metabuild.hash=${metabuild.hash}</echo>
       <nbbrowse file="${netbeans.javadoc.dir}/index.html"/>
   </target>
 
-  <!-- build source zips for selected modules - useful for populating maven repository only-->
-  <target name="build-source-zips" depends="init" description="Builds source zips for maven repository inclusion.">
+  <target name="-init-sources-zip" depends="init">
       <property name="netbeans.zipped.sources.dir" location="${nb.build.dir}/source-zips" />
-      
+  </target>
+
+  <!-- build source zips for selected modules - useful for populating maven repository only-->
+  <target name="build-source-zips" depends="init,-init-sources-zip" description="Builds source zips for maven repository inclusion.">
       <subant-junit target="sources-zip" failonerror="true">
           <buildpath path="${modules.sorted}"/>
       </subant-junit>
+  </target>
+
+  <target name="maven-install" depends="init,-init-sources-zip" description="Finishes installation of artifacts into Maven repository">
+      <echo message="=== Run only after ===${line.separator} ant build-source-zips${line.separator} ant build-nbms${line.separator} ant build-javadoc${line.separator}=== Only then maven-install ===${line.separator}"/>
+
+      <!--
+      Inspired by following two invocations:
+
+      # https://github.com/apache/netbeans-jenkins-lib/blob/120b7fe817075c802dbc7f8cb59d5d218249e310/vars/asfMainNetBeansBuild.groovy#L200
+      mvn org.apache.maven.plugins:maven-dependency-plugin:3.5.0:get
+        -Dartifact=org.apache.netbeans.utilities:nb-repository-plugin:${nbm.plugin.version}
+        -DremoteRepositories=apache.snapshots.https::::https://repository.apache.org/snapshots
+
+      mvn org.apache.netbeans.utilities:nb-repository-plugin:${nbm.plugin.version}:populate
+        -X ${commonparam}
+        -DnetbeansNbmDirectory=${netbeansbase}/nbms
+        -DnetbeansInstallDirectory=${netbeansbase}/netbeans
+        -DnetbeansSourcesDirectory=${netbeansbase}/build/source-zips
+        -DnetbeansJavadocDirectory=${netbeansbase}/build/javadoc
+        -DparentGAV=org.apache.netbeans:netbeans-parent:5
+        -DforcedVersion=${nbm.install.version}
+        -DskipInstall=true
+        -DdeployId=apache.snapshots.https
+        -DdeployUrl=https://repository.apache.org/content/repositories/snapshots
+
+      # https://github.com/apache/netbeans-jenkins-lib/blob/120b7fe817075c802dbc7f8cb59d5d218249e310/vars/asfMainNetBeansBuild.groovy#L437
+      mvn org.apache.netbeans.utilities:nb-repository-plugin:${nbm.plugin.version}:populate
+        ${commonparam}
+        -DnetbeansNbmDirectory=${netbeansbase}/nbms
+        -DnetbeansInstallDirectory=${netbeansbase}/netbeans
+        -DnetbeansSourcesDirectory=${netbeansbase}/build/source-zips
+        -DnetbeansJavadocDirectory=${netbeansbase}/build/javadoc
+        -DparentGAV=org.apache.netbeans:netbeans-parent:5
+        -DforcedVersion=${nbm.install.version}
+        -DskipInstall=true
+        -DdeployUrl=file://${env.WORKSPACE}/mavenrepository
+
+      zip zipFile:'mavenrepo.zip',dir:'mavenrepository',archive:'true'
+      -->
+      <property name="mavenArgs" value=""/>
+      <mkdir dir="nbms" />
+      <property name="base.nbm.target.dir" location="nbms" />
+      <condition property=".cmd" value=".cmd" else="">
+          <os family="windows"/>
+      </condition>
+      <condition property="exists.netbeansSourcesDirectory" value="true" else="false">
+          <available file="${netbeans.zipped.sources.dir}"/>
+      </condition>
+      <condition property="exists.netbeansJavadocDirectory" value="true" else="false">
+          <available file="${netbeans.javadoc.dir}"/>
+      </condition>
+      <exec executable="${maven.embedder.dir}/maven/bin/mvn${.cmd}" failonerror="true">
+          <arg value="org.apache.netbeans.utilities:nb-repository-plugin:${nbm.plugin.version}:populate"/>
+          <arg value="-DnetbeansInstallDirectory=${netbeans.dest.dir}"/>
+          <arg value="-DnetbeansNbmDirectory=${base.nbm.target.dir}"/>
+          <arg value="-DnetbeansSourcesDirectory=${netbeans.zipped.sources.dir}" if:true="${exists.netbeansSourcesDirectory}"/>
+          <arg value="-DnetbeansJavadocDirectory=${netbeans.javadoc.dir}" if:true="${exists.netbeansJavadocDirectory}"/>
+          <arg value="-DparentGAV=org.apache.netbeans:netbeans-parent:${nbm.install.parent.version}"/>
+          <arg value="-DforcedVersion=${nbm.install.version}"/>
+          <arg line="${mavenArgs}"/>
+          <env key="JAVA_HOME" value="${java.home}"/>
+      </exec>
+      <echo message="Installed -Dnbm.install.version=${nbm.install.version} into Maven repository with additional -DmavenArgs=${mavenArgs}"/>
   </target>
   
       
@@ -2181,7 +2246,7 @@ It is possible to use -Ddebug.port=3234 -Ddebug.pause=y to start the system in d
         
         <taskdef uri="antlib:org.apache.rat.anttasks" resource="org/apache/rat/anttasks/antlib.xml">
             <classpath>
-                <pathelement location="external/apache-rat-0.15.jar"/>
+                <pathelement location="external/apache-rat-0.18.jar"/>
             </classpath>
         </taskdef>
         
@@ -2192,28 +2257,27 @@ It is possible to use -Ddebug.port=3234 -Ddebug.pause=y to start the system in d
             <excludesfile name="build/rat-exclusions-licenseinfo.txt" />
         </fileset>
         
-        <rat:report xmlns:rat="antlib:org.apache.rat.anttasks" reportfile="build/rat-report.txt">
-            <rat:fullTextMatcher licenseFamilyCategory="AL" licenseFamilyName="Apache License 2.0 Short header">
-                Licensed to the Apache Software Foundation (ASF) under one or more contributor 
-                license agreements; and to You under the Apache License, Version 2.0.
-            </rat:fullTextMatcher>
-            <rat:approvedLicense familyName="Apache License 2.0 Short header"/>
-
+        <rat:report xmlns:rat="antlib:org.apache.rat.anttasks" outputStyle="xml" outputfile="${nb.build.dir}/rat-report.xml">
             <resources refid="rat.files" />
         </rat:report>
-        <rat:report xmlns:rat="antlib:org.apache.rat.anttasks" format="xml" reportfile="build/rat-report.xml">
-            <rat:fullTextMatcher licenseFamilyCategory="AL" licenseFamilyName="Apache License 2.0 Short header">
-                Licensed to the Apache Software Foundation (ASF) under one or more contributor
-                license agreements; and to You under the Apache License, Version 2.0.
-            </rat:fullTextMatcher>
-            <rat:approvedLicense familyName="Apache License 2.0 Short header"/>
 
-            <resources refid="rat.files" />
-        </rat:report>
+        <!-- reduce size of file by removing full path -->
+        <taskdef name="ratrelativize" classname="org.netbeans.nbbuild.RatRelativize" classpath="${build.ant.classes.dir}"/>
+        <ratrelativize file="${nb.build.dir}/rat-report.xml" />
+
+        <xslt in="${nb.build.dir}/rat-report.xml" out="${nb.build.dir}/rat-report.txt">
+            <style>
+                <javaresource name="org/apache/rat/plain-rat.xsl">
+                    <classpath>
+                        <pathelement location="external/apache-rat-0.18.jar"/>
+                    </classpath>
+                </javaresource>
+            </style>
+        </xslt>
         <taskdef name="rattotest" classname="org.netbeans.nbbuild.RatReportTask" classpath="${build.ant.classes.dir}"/>
         <loadproperties srcFile="cluster.properties" />
         <property name="rat-report.haltonfailure" value="false" />
-        <rattotest source="build/rat-report.xml" report="${nb.build.dir}/rat/" haltonfailure="${rat-report.haltonfailure}" />
+        <rattotest source="${nb.build.dir}/rat-report.xml" report="${nb.build.dir}/rat/" haltonfailure="${rat-report.haltonfailure}" />
         
         <reportFromLicenseinfo nball=".." report="${nb.build.dir}/rat-appendix.txt" />
     </target>

@@ -150,22 +150,22 @@ public class MemoryIndex implements Index {
                     if (cancel != null && cancel.get()) {
                         throw new InterruptedException();
                     }
-                    if (q instanceof TermQuery) {
-                        Terms terms = lr.terms(((TermQuery) q).getTerm().field());
+                    if (q instanceof TermQuery termQuery) {
+                        Terms terms = lr.terms(termQuery.getTerm().field());
                         if (terms != null) {
                             TermsEnum te = terms.iterator();
-                            if (te.seekExact(((TermQuery) q).getTerm().bytes())) {
+                            if (te.seekExact(termQuery.getTerm().bytes())) {
                                 PostingsEnum pe = te.postings(null);
                                 for (int doc = pe.nextDoc(); doc != DocIdSetIterator.NO_MORE_DOCS; doc = pe.nextDoc()) {
                                     docTermMap.computeIfAbsent(doc, s -> new HashSet<>())
-                                            .add(((TermQuery) q).getTerm().bytes());
+                                            .add(termQuery.getTerm().bytes());
                                 }
                             }
                         }
-                    } else if (q instanceof PrefixQuery) {
-                        Terms terms = lr.terms(((PrefixQuery) q).getField());
+                    } else if (q instanceof PrefixQuery prefixQuery) {
+                        Terms terms = lr.terms(prefixQuery.getField());
                         if (terms != null) {
-                            TermsEnum te = new CompiledAutomaton(((PrefixQuery) q).getAutomaton()).getTermsEnum(terms);
+                            TermsEnum te = new CompiledAutomaton(prefixQuery.getAutomaton()).getTermsEnum(terms);
                             for (BytesRef termValue = te.next(); termValue != null; termValue = te.next()) {
                                 PostingsEnum pe = te.postings(null);
                                 BytesRef localRef = null;
@@ -179,10 +179,10 @@ public class MemoryIndex implements Index {
                                 }
                             }
                         }
-                    } else if (q instanceof RegexpFilter) {
-                        Terms terms = lr.terms(((RegexpFilter) q).getField());
+                    } else if (q instanceof RegexpFilter regexpFilter) {
+                        Terms terms = lr.terms(regexpFilter.getField());
                         if (terms != null) {
-                            TermsEnum te = ((RegexpFilter) q).getTermsEnum(terms);
+                            TermsEnum te = regexpFilter.getTermsEnum(terms);
                             for (BytesRef termValue = te.next(); termValue != null; termValue = te.next()) {
                                 PostingsEnum pe = te.postings(null);
                                 BytesRef localRef = null;
@@ -245,8 +245,12 @@ public class MemoryIndex implements Index {
             if (in == null) {
                 return;
             }
-            for(LeafReaderContext lrc: in.leaves()) {
-                TermsEnum te = lrc.reader().terms(field).iterator();
+            for (LeafReaderContext lrc: in.leaves()) {
+                Terms terms = lrc.reader().terms(field);
+                if (terms == null) {
+                    continue;
+                }
+                TermsEnum te = terms.iterator();
                 if (te.seekCeil(startBytesRef) != TermsEnum.SeekStatus.END) {
                     do {
                         if (cancel != null && cancel.get()) {
@@ -352,7 +356,7 @@ public class MemoryIndex implements Index {
     }
     
     private static <T> Set<T> convertTerms(final Convertor<? super BytesRef, T> convertor, final Set<? extends BytesRef> terms) {
-        Set<T> result = new HashSet<>(terms.size());
+        Set<T> result = HashSet.newHashSet(terms.size());
         for (BytesRef term : terms) {
             result.add(convertor.convert(term));
         }

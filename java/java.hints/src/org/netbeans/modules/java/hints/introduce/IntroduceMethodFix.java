@@ -33,6 +33,7 @@ import com.sun.source.tree.StatementTree;
 import com.sun.source.tree.Tree;
 import com.sun.source.tree.TypeParameterTree;
 import com.sun.source.tree.VariableTree;
+import com.sun.source.tree.YieldTree;
 import com.sun.source.util.SourcePositions;
 import com.sun.source.util.TreePath;
 import java.awt.GraphicsEnvironment;
@@ -262,6 +263,25 @@ public final class IntroduceMethodFix extends IntroduceFixBase implements Fix {
                     returnType = methodReturnType;
                     returnAssignTo = null;
                     declareVariableForReturnValue = false;
+                } else if (exitsFromAllBranches && scanner.hasYields) {
+                    returnType = info.getTypes().getNullType();
+                    for (TreePath exit : scanner.selectionExits) {
+                        if (exit.getLeaf().getKind() == Tree.Kind.YIELD) {
+                            Tree target = info.getTreeUtilities().getBreakContinueTargetTree(exit);
+                            TreePath switchExpr = exit;
+
+                            while (switchExpr != null && switchExpr.getLeaf() != target) {
+                                switchExpr = switchExpr.getParentPath();
+                            }
+
+                            if (switchExpr != null) {
+                                returnType = info.getTrees().getTypeMirror(switchExpr);
+                                break;
+                            }
+                        }
+                    }
+                    returnAssignTo = null;
+                    declareVariableForReturnValue = false;
                 } else {
                     returnType = info.getTypes().getNoType(TypeKind.VOID);
                     returnAssignTo = null;
@@ -334,8 +354,8 @@ public final class IntroduceMethodFix extends IntroduceFixBase implements Fix {
             if (!StatementTree.class.isAssignableFrom(leaf.getKind().asInterface())) {
                 continue;
             }
-            long treeStart = ci.getTrees().getSourcePositions().getStartPosition(ci.getCompilationUnit(), leaf);
-            long treeEnd = ci.getTrees().getSourcePositions().getEndPosition(ci.getCompilationUnit(), leaf);
+            long treeStart = ci.getTrees().getSourcePositions().getStartPosition(leaf);
+            long treeEnd = ci.getTrees().getSourcePositions().getEndPosition(leaf);
             if (treeStart != start || treeEnd != end) {
                 continue;
             }
@@ -355,7 +375,7 @@ public final class IntroduceMethodFix extends IntroduceFixBase implements Fix {
         List<? extends StatementTree> statements = tpStart.getLeaf().getKind() == Tree.Kind.BLOCK ? ((BlockTree) tpStart.getLeaf()).getStatements() : ((CaseTree) tpStart.getLeaf()).getStatements();
         int index = 0;
         for (StatementTree s : statements) {
-            long sStart = ci.getTrees().getSourcePositions().getStartPosition(ci.getCompilationUnit(), s);
+            long sStart = ci.getTrees().getSourcePositions().getStartPosition(s);
             if (sStart == start && from == (-1)) {
                 from = index;
             }
@@ -467,8 +487,8 @@ public final class IntroduceMethodFix extends IntroduceFixBase implements Fix {
         public int compare(Occurrence o1, Occurrence o2) {
             Tree r1 = o1.getOccurrenceRoot().getLeaf();
             Tree r2 = o2.getOccurrenceRoot().getLeaf();
-            int p1 = (int)positions.getStartPosition(cut, r1);
-            int p2 = (int)positions.getStartPosition(cut, r2);
+            int p1 = (int)positions.getStartPosition(r1);
+            int p2 = (int)positions.getStartPosition(r2);
             return p1 - p2;
         }
         
@@ -628,7 +648,11 @@ public final class IntroduceMethodFix extends IntroduceFixBase implements Fix {
             }
             if (branchExit != null) {
                 if (returnSingleValue) {
-                    nueStatements.add(make.Return(invocation));
+                    if (branchExit.getLeaf().getKind() == Tree.Kind.YIELD) {
+                        nueStatements.add(make.Yield(invocation));
+                    } else {
+                        nueStatements.add(make.Return(invocation));
+                    }
                 } else {
                     StatementTree branch = null;
                     switch (branchExit.getLeaf().getKind()) {
@@ -640,6 +664,9 @@ public final class IntroduceMethodFix extends IntroduceFixBase implements Fix {
                             break;
                         case RETURN:
                             branch = make.Return(((ReturnTree) branchExit.getLeaf()).getExpression());
+                            break;
+                        case YIELD:
+                            branch = make.Yield(((YieldTree) branchExit.getLeaf()).getValue());
                             break;
                     }
                     if (remappedReturn != null || exitsFromAllBranches) {
@@ -674,6 +701,13 @@ public final class IntroduceMethodFix extends IntroduceFixBase implements Fix {
          */
         private void makeReturnsFromExtractedMethod(List<StatementTree> methodStatements) {
             if (returnSingleValue) {
+                for (TreePath resolved : resolvedExits) {
+                    if (resolved.getLeaf().getKind() == Tree.Kind.YIELD) {
+                        YieldTree yield = (YieldTree) resolved.getLeaf();
+
+                        copy.rewrite(resolved.getLeaf(), make.Return(yield.getValue()));
+                    }
+                }
                 return;
             }
             if (resolvedExits != null) {
@@ -728,7 +762,7 @@ public final class IntroduceMethodFix extends IntroduceFixBase implements Fix {
                     resolvedExits.add(resolved);
                 }
                 
-                returnSingleValue = exitsFromAllBranches && branchExit.getLeaf().getKind() == Tree.Kind.RETURN && outcomeVariable == null && returnType.getKind() != TypeKind.VOID;
+                returnSingleValue = exitsFromAllBranches && (branchExit.getLeaf().getKind() == Tree.Kind.RETURN || branchExit.getLeaf().getKind() == Tree.Kind.YIELD) && outcomeVariable == null && returnType.getKind() != TypeKind.VOID;
             }
             // initialization
             make = copy.getTreeMaker();
@@ -874,8 +908,8 @@ public final class IntroduceMethodFix extends IntroduceFixBase implements Fix {
                             }
                         }
                     }
-                    int startOff = (int) copy.getTrees().getSourcePositions().getStartPosition(copy.getCompilationUnit(), firstSt);
-                    int endOff = (int) copy.getTrees().getSourcePositions().getEndPosition(copy.getCompilationUnit(), lastSt);
+                    int startOff = (int) copy.getTrees().getSourcePositions().getStartPosition(firstSt);
+                    int endOff = (int) copy.getTrees().getSourcePositions().getEndPosition(lastSt);
                     
                     if (usedAfter || !GraphicsEnvironment.isHeadless() && !IntroduceHint.shouldReplaceDuplicate(doc, startOff, endOff)) {
                         continue;
